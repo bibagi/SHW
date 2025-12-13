@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Шесть Рукопожатий Википедии</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <!-- Анимированный фон -->
+    <div class="animated-bg">
+        <div class="grid-lines"></div>
+        <div class="floating-icons">
+            <span class="float-icon">W</span>
+            <span class="float-icon">6</span>
+            <span class="float-icon">→</span>
+            <span class="float-icon">?</span>
+            <span class="float-icon">W</span>
+            <span class="float-icon">+</span>
+            <span class="float-icon">1</span>
+            <span class="float-icon">→</span>
+        </div>
+        <div class="noise"></div>
+    </div>
+
+    <!-- Лобби -->
+    <div id="lobby" class="screen active">
+        <div class="lobby-slider">
+            <!-- Главное меню (центр) -->
+            <div class="slide slide-menu active" id="slideMenu">
+                <div class="menu-center">
+                    <h1 class="menu-title">
+                        Шесть Рукопожатий
+                        <span class="title-accent">Википедии</span>
+                    </h1>
+                    <p class="menu-desc">
+                        Найди путь от главной страницы Wikipedia до случайной статьи
+                    </p>
+
+                    <!-- Профиль -->
+                    <div class="player-card">
+                        <div class="player-avatar" id="userAvatar" onclick="toggleColorPicker()">?</div>
+                        <input type="text" id="playerName" class="player-name-input" placeholder="Ваш ник"
+                            maxlength="20">
+                    </div>
+
+                    <!-- Режим 404 -->
+                    <div class="mode-card" id="death404Card">
+                        <div class="mode-header">
+                            <span class="mode-icon">404</span>
+                            <div class="mode-info">
+                                <span class="mode-title">Режим <span class="danger">Хардкор</span></span>
+                            </div>
+                            <button class="mode-toggle" id="death404Toggle">OFF</button>
+                        </div>
+                        <button class="modifiers-btn" id="modifiersTrigger">
+                            Усложнения <span class="mod-count" id="modifiersCount">0</span>
+                        </button>
+                    </div>
+
+                    <!-- Кнопки -->
+                    <div class="menu-buttons">
+                        <button id="btnSinglePlayer" class="btn-play btn-solo">
+                            <span class="btn-pattern"></span>
+                            <span class="btn-icon-main">🎮</span>
+                            <span class="btn-text">Одиночная игра</span>
+                        </button>
+
+                        <div class="btn-row">
+                            <button id="btnCreateRoom" class="btn-play btn-create">
+                                <span class="btn-pattern"></span>
+                                <span class="btn-icon-main">➕</span>
+                                <span class="btn-text">Создать</span>
+                            </button>
+                            <button id="btnJoinRoom" class="btn-play btn-join">
+                                <span class="btn-pattern"></span>
+                                <span class="btn-icon-main">🚪</span>
+                                <span class="btn-text">Войти</span>
+                            </button>
+                        </div>
+
+                        <button class="btn-how" id="btnHowToPlay">
+                            <span class="btn-pattern"></span>
+                            <span class="btn-icon-main">❓</span>
+                            <span class="btn-text">Как играть</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Панель комнаты -->
+            <div class="slide slide-room" id="slideRoom">
+                <div class="room-panel">
+                    <button class="back-btn" id="btnBackToMenu">
+                        <span class="back-arrow">←</span> Назад
+                    </button>
+
+                    <div class="room-main">
+                        <!-- Код комнаты -->
+                        <div class="room-code-card">
+                            <span class="room-code-label">Код комнаты</span>
+                            <span class="room-code-value" id="roomCodeDisplay"
+                                onclick="copyRoomCodePanel()">------</span>
+                            <span class="room-code-hint">Нажмите чтобы скопировать</span>
+                        </div>
+
+                        <!-- Настройки (только для хоста) -->
+                        <div class="room-settings" id="roomSettings">
+                            <div class="settings-title">Настройки</div>
+                            <div class="setting-item" id="death404Setting">
+                                <span class="setting-icon">404</span>
+                                <span class="setting-name">Режим Хардкор</span>
+                                <button class="setting-toggle" id="roomDeath404Toggle">OFF</button>
+                            </div>
+                            <button class="setting-modifiers-btn" id="roomModifiersTrigger">
+                                Усложнения <span class="mod-count" id="roomModifiersCount">0</span>
+                            </button>
+                        </div>
+
+                        <!-- Игроки -->
+                        <div class="room-players-section">
+                            <div class="players-header">
+                                <span class="players-title">Игроки</span>
+                                <button class="players-count-btn" id="playersCountBtn">
+                                    <span id="playersCount">0</span>/<span id="maxPlayersDisplay">8</span>
+                                </button>
+                            </div>
+                            <div class="players-list" id="playersListPanel"></div>
+                        </div>
+
+                        <!-- Селектор макс игроков (popup) -->
+                        <div class="max-players-popup" id="maxPlayersPopup">
+                            <div class="max-players-title">Максимум игроков</div>
+                            <div class="players-wheel" id="playersWheel">
+                                <div class="wheel-option" data-value="2">2</div>
+                                <div class="wheel-option" data-value="4">4</div>
+                                <div class="wheel-option" data-value="6">6</div>
+                                <div class="wheel-option selected" data-value="8">8</div>
+                                <div class="wheel-option" data-value="10">10</div>
+                                <div class="wheel-option" data-value="12">12</div>
+                                <div class="wheel-option" data-value="16">16</div>
+                            </div>
+                            <button class="max-players-confirm" id="maxPlayersConfirm">Применить</button>
+                        </div>
+
+                        <!-- Статус готовности -->
+                        <div class="ready-status-bar" id="readyStatusBar">
+                            <div class="ready-progress">
+                                <div class="ready-progress-fill" id="readyProgressFill"></div>
+                            </div>
+                            <span class="ready-text" id="readyText">Ожидание игроков...</span>
+                        </div>
+
+                        <!-- Кнопки -->
+                        <div class="room-buttons">
+                            <button id="btnReadyLobby" class="btn-action btn-ready-room hidden">
+                                <span class="btn-icon">✓</span>
+                                <span class="btn-label">Готов</span>
+                            </button>
+                            <button id="btnStartGamePanel" class="btn-action btn-start-room hidden" disabled>
+                                <span class="btn-icon">▶</span>
+                                <span class="btn-label">Начать игру</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Форма присоединения -->
+            <div class="slide slide-join" id="slideJoin">
+                <div class="join-panel">
+                    <button class="back-btn" id="btnBackFromJoin">
+                        <span class="back-arrow">←</span> Назад
+                    </button>
+
+                    <div class="join-card">
+                        <h2>Войти в комнату</h2>
+                        <p>Введите код комнаты</p>
+                        <input type="text" id="roomCodeInput" class="code-input" placeholder="XXXXXX" maxlength="6">
+                        <button id="btnJoinConfirm" class="btn-action btn-join-confirm">
+                            <span class="btn-icon">→</span>
+                            <span class="btn-label">Присоединиться</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Popup настройки цвета -->
+    <div class="color-picker-popup" id="colorPickerPopup">
+        <div class="picker-header">
+            <span>🎨 Цвет аватара</span>
+            <button class="picker-close" onclick="toggleColorPicker()">✕</button>
+        </div>
+        <div class="picker-content">
+            <div class="color-wheel-wrap">
+                <canvas id="colorWheel" width="150" height="150"></canvas>
+            </div>
+            <div class="color-presets">
+                <div class="preset" style="background:#e74c3c" onclick="selectPresetColor('#e74c3c')"></div>
+                <div class="preset" style="background:#e67e22" onclick="selectPresetColor('#e67e22')"></div>
+                <div class="preset" style="background:#f1c40f" onclick="selectPresetColor('#f1c40f')"></div>
+                <div class="preset" style="background:#2ecc71" onclick="selectPresetColor('#2ecc71')"></div>
+                <div class="preset" style="background:#3498db" onclick="selectPresetColor('#3498db')"></div>
+                <div class="preset" style="background:#9b59b6" onclick="selectPresetColor('#9b59b6')"></div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Модальное окно усложнений -->
+    <div class="modal-overlay" id="modifiersModal">
+        <div class="modal-box modifiers-modal">
+            <div class="modal-head">
+                <h2>⚡ Усложнения</h2>
+                <button class="modal-x" id="modifiersModalClose">×</button>
+            </div>
+            <div class="modal-content modifiers-content">
+                <!-- Левая колонка - список модификаторов -->
+                <div class="mod-list">
+                    <div class="mod-group">
+                        <div class="mod-group-header">
+                            <span class="mod-group-icon">💀</span>
+                            <span class="mod-group-title">Хардкор</span>
+                        </div>
+                        <div class="mod-items">
+                            <div class="mod-item" data-modifier="randomStart">
+                                <div class="mod-item-icon">🎲</div>
+                                <div class="mod-item-info">
+                                    <span class="mod-item-name">Случайный старт</span>
+                                    <span class="mod-item-desc">Начни с рандомной статьи</span>
+                                </div>
+                                <button class="mod-toggle" data-modifier="randomStart">
+                                    <span class="toggle-slider"></span>
+                                </button>
+                            </div>
+                            <div class="mod-item" data-modifier="teleport">
+                                <div class="mod-item-icon">🌀</div>
+                                <div class="mod-item-info">
+                                    <span class="mod-item-name">Телепорт</span>
+                                    <span class="mod-item-desc">Перенос каждые 15 сек</span>
+                                </div>
+                                <button class="mod-toggle" data-modifier="teleport">
+                                    <span class="toggle-slider"></span>
+                                </button>
+                            </div>
+                            <div class="mod-item" data-modifier="timeLimit">
+                                <div class="mod-item-icon">⏱️</div>
+                                <div class="mod-item-info">
+                                    <span class="mod-item-name">Лимит времени</span>
+                                    <span class="mod-item-desc">Успей за отведённое время</span>
+                                </div>
+                                <button class="mod-toggle" data-modifier="timeLimit">
+                                    <span class="toggle-slider"></span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mod-group meme-group">
+                        <div class="mod-group-header">
+                            <span class="mod-group-icon">🤡</span>
+                            <span class="mod-group-title">Мемные</span>
+                        </div>
+                        <div class="mod-items">
+                            <div class="mod-item" data-modifier="hiddenTarget">
+                                <div class="mod-item-icon">🙈</div>
+                                <div class="mod-item-info">
+                                    <span class="mod-item-name">Скрытая цель</span>
+                                    <span class="mod-item-desc">Название цели скрыто</span>
+                                </div>
+                                <button class="mod-toggle" data-modifier="hiddenTarget">
+                                    <span class="toggle-slider"></span>
+                                </button>
+                            </div>
+                            <div class="mod-item" data-modifier="blindKitten">
+                                <div class="mod-item-icon">🐱</div>
+                                <div class="mod-item-info">
+                                    <span class="mod-item-name">Слепой котёнок</span>
+                                    <span class="mod-item-desc">Текст статей скрыт</span>
+                                </div>
+                                <button class="mod-toggle" data-modifier="blindKitten">
+                                    <span class="toggle-slider"></span>
+                                </button>
+                            </div>
+                            <div class="mod-item" data-modifier="drunk">
+                                <div class="mod-item-icon">🍺</div>
+                                <div class="mod-item-info">
+                                    <span class="mod-item-name">Пьяный режим</span>
+                                    <span class="mod-item-desc">Буквы пляшут</span>
+                                </div>
+                                <button class="mod-toggle" data-modifier="drunk">
+                                    <span class="toggle-slider"></span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Правая колонка - выбор цели -->
+                <div class="target-selector">
+                    <div class="target-selector-header">
+                        <span class="target-selector-icon">🎯</span>
+                        <span class="target-selector-title">Целевая статья</span>
+                    </div>
+                    <div class="target-search-wrap">
+                        <input type="text" id="targetSearchInput" class="target-search-input"
+                            placeholder="Поиск статьи..." autocomplete="off">
+                        <div class="target-search-icon">🔍</div>
+                        <div class="target-suggestions" id="targetSuggestions"></div>
+                    </div>
+                    <div class="target-selected" id="targetSelected">
+                        <div class="target-selected-label">Выбрано:</div>
+                        <div class="target-selected-value" id="targetSelectedValue">🎲 Случайная статья</div>
+                        <button class="target-clear-btn" id="targetClearBtn" title="Сбросить">×</button>
+                    </div>
+                    <div class="target-random-btn" id="targetRandomBtn">
+                        <span class="random-icon">🎲</span>
+                        <span>Случайная статья</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-foot modifiers-foot">
+                <div class="mod-active-count">
+                    <span class="mod-active-label">Активно:</span>
+                    <span class="mod-active-num" id="activeModifiersCount">0</span>
+                </div>
+                <button class="btn-done btn-apply-mods" id="modifiersConfirm">
+                    <span>✓</span> Применить
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно "Как играть" -->
+    <div class="modal-overlay" id="howToPlayModal">
+        <div class="modal-box">
+            <div class="modal-head">
+                <h2>Как играть</h2>
+                <button class="modal-x" id="howToPlayModalClose">×</button>
+            </div>
+            <div class="modal-content">
+                <div class="help-nav">
+                    <div class="help-tab active" data-topic="basics">Основы</div>
+                    <div class="help-tab" data-topic="multiplayer">Мультиплеер</div>
+                    <div class="help-tab" data-topic="mode404">Режим 404</div>
+                    <div class="help-tab" data-topic="tips">Советы</div>
+                </div>
+                <div class="help-body" id="helpContent">
+                    <div class="help-page" data-topic="basics">
+                        <h3>Основы игры</h3>
+                        <p>Игра основана на теории шести рукопожатий.</p>
+                        <p><b>Цель:</b> Найти путь от главной страницы Википедии до целевой статьи по ссылкам.</p>
+                        <p><b>Победа:</b> Кто быстрее найдёт — тот победил!</p>
+                    </div>
+                    <div class="help-page hidden" data-topic="multiplayer">
+                        <h3>Мультиплеер</h3>
+                        <p><b>Создать:</b> Нажмите "Создать" и поделитесь кодом.</p>
+                        <p><b>Войти:</b> Введите код комнаты.</p>
+                    </div>
+                    <div class="help-page hidden" data-topic="mode404">
+                        <h3>Режим 404</h3>
+                        <p>Хардкорный режим с усложнениями!</p>
+                        <p>Телепорт, лимит времени, скрытая цель и другое.</p>
+                    </div>
+                    <div class="help-page hidden" data-topic="tips">
+                        <h3>Советы</h3>
+                        <p>• Используйте общие категории как промежуточные точки</p>
+                        <p>• Читайте первый абзац — там полезные ссылки</p>
+                        <p>• ESC — закрыть окно</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Отсчёт -->
+    <div id="countdown" class="screen">
+        <div class="countdown-box">
+            <h2>Игра начинается!</h2>
+            <div class="countdown-target">
+                <p>Старт: <b>Главная страница</b></p>
+                <p>Цель: <b id="countdownTarget">...</b></p>
+            </div>
+            <div id="countdownNumber" class="countdown-num">3</div>
+        </div>
+    </div>
+
+    <!-- Игра -->
+    <div id="game" class="screen">
+        <div class="game-header">
+            <div class="game-header-left">
+                <div class="game-logo">6°</div>
+            </div>
+            <div class="game-header-center">
+                <div class="target-badge">
+                    <span class="target-label">ЦЕЛЬ</span>
+                    <span class="target-name" id="targetTitle">Загрузка...</span>
+                </div>
+            </div>
+            <div class="game-header-right">
+                <div class="timer-badge">
+                    <span class="timer-value" id="timer">00:00</span>
+                </div>
+                <button class="btn-found" id="btnFoundTarget">Нашёл!</button>
+                <button class="btn-exit" onclick="backToLobby()">×</button>
+            </div>
+        </div>
+
+        <div class="game-content">
+            <div class="hint-panel" id="targetDescriptionBox">
+                <div class="hint-header">
+                    <span class="hint-title">Подсказка</span>
+                    <button id="btnToggleHint" class="hint-toggle-btn">−</button>
+                </div>
+                <div id="targetDescription" class="hint-body"></div>
+            </div>
+
+            <div class="wiki-container">
+                <iframe id="wikiFrame" class="wiki-frame"
+                    sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-top-navigation"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <!-- Результаты -->
+    <div id="results" class="screen">
+        <!-- Боковые декоративные панели -->
+        <div class="side-decor side-left">
+            <div class="decor-line"></div>
+            <div class="decor-shape"></div>
+            <div class="decor-icon">🏆</div>
+            <div class="decor-shape"></div>
+            <div class="decor-line"></div>
+        </div>
+        <div class="side-decor side-right">
+            <div class="decor-line"></div>
+            <div class="decor-shape"></div>
+            <div class="decor-icon">⭐</div>
+            <div class="decor-shape"></div>
+            <div class="decor-line"></div>
+        </div>
+
+        <div class="results-container">
+            <div class="results-header">
+                <div class="trophy-icon">🏆</div>
+                <h1 class="results-title">Игра окончена</h1>
+            </div>
+
+            <div id="winnerInfo" class="winner-section hidden">
+                <div class="winner-badge">ПОБЕДИТЕЛЬ</div>
+                <div class="winner-name" id="winnerName">---</div>
+                <div class="winner-stats">
+                    <div class="stat-item">
+                        <span class="stat-value" id="winnerTime">00:00</span>
+                        <span class="stat-label">Время</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="target-result">
+                <span class="target-result-label">Целевая статья</span>
+                <span class="target-result-name" id="resultTarget">---</span>
+            </div>
+
+            <div id="targetPageContainer" class="wiki-preview hidden">
+                <iframe id="resultPageFrame" class="preview-frame"></iframe>
+            </div>
+
+            <div id="multiplayerResults" class="multiplayer-section hidden">
+                <div id="resultsTable" class="players-results"></div>
+                <div id="readySystem" class="ready-section">
+                    <h4>Готовность к следующей игре</h4>
+                    <div id="readyPlayersList"></div>
+                </div>
+            </div>
+
+            <div class="results-actions">
+                <button id="btnPlayAgain" class="btn-action btn-play-again">
+                    <span class="btn-icon">🔄</span>
+                    <span class="btn-label">Играть снова</span>
+                </button>
+                <button id="btnReady" class="btn-action btn-ready-result hidden">
+                    <span class="btn-icon">✓</span>
+                    <span class="btn-label">Готов</span>
+                </button>
+                <button id="btnBackToLobby" class="btn-action btn-to-menu">
+                    <span class="btn-icon">←</span>
+                    <span class="btn-label">В главное меню</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+
+</html>
