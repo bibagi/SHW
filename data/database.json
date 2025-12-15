@@ -1,0 +1,47 @@
+{
+  "users": [
+    {
+      "id": 1765798501548,
+      "username": "iuwfe",
+      "password_hash": "5868240a4bc9007c69b860875758654d6ab45900df69973662551d9093d5a420",
+      "display_name": "iuwfe",
+      "color": "rgb(226, 107, 0)",
+      "xp": 164,
+      "level": 1,
+      "wins": 1,
+      "losses": 0,
+      "total_games": 1,
+      "solo_games": 1,
+      "multi_games": 0,
+      "best_time": 17,
+      "total_clicks": 0,
+      "streak": 0,
+      "max_streak": 0,
+      "title": {
+        "name": "Создатель",
+        "color": "#ffd700"
+      },
+      "created_at": "2025-12-15T11:35:01.549Z"
+    }
+  ],
+  "sessions": [
+    {
+      "token": "c9915f9a61870ac975f3330993101a43b12a09a45e470fb9119e084298470d8e",
+      "user_id": 1765798501548,
+      "expires_at": "2026-01-14T12:57:35.855Z"
+    }
+  ],
+  "gameHistory": [
+    {
+      "id": 1765799039020,
+      "user_id": 1765798501548,
+      "is_solo": true,
+      "is_winner": true,
+      "time_seconds": 17,
+      "clicks": 0,
+      "xp_gained": 164,
+      "target_article": "Дом А. Ф. Кушакевича",
+      "played_at": "2025-12-15T11:43:59.020Z"
+    }
+  ]
+}

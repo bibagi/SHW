@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const https = require('https');
 const WebSocket = require('ws');
+const db = require('./database');
 
 const app = express();
 const server = http.createServer(app);
@@ -13,6 +14,116 @@ app.use(express.json());
 // Health check endpoint для Render
 app.get('/health', (req, res) => {
     res.status(200).send('OK');
+});
+
+// ========== AUTH API ==========
+
+// Регистрация
+app.post('/api/register', (req, res) => {
+    const { username, password, displayName } = req.body;
+    
+    if (!username || !password) {
+        return res.status(400).json({ error: 'Логин и пароль обязательны' });
+    }
+    
+    if (username.length < 3 || username.length > 20) {
+        return res.status(400).json({ error: 'Логин должен быть от 3 до 20 символов' });
+    }
+    
+    if (password.length < 4) {
+        return res.status(400).json({ error: 'Пароль минимум 4 символа' });
+    }
+    
+    const result = db.register(username, password, displayName || username);
+    
+    if (!result.success) {
+        return res.status(400).json({ error: result.error });
+    }
+    
+    res.json({ token: result.token, user: result.user });
+});
+
+// Вход
+app.post('/api/login', (req, res) => {
+    const { username, password } = req.body;
+    
+    if (!username || !password) {
+        return res.status(400).json({ error: 'Логин и пароль обязательны' });
+    }
+    
+    const result = db.login(username, password);
+    
+    if (!result.success) {
+        return res.status(401).json({ error: result.error });
+    }
+    
+    res.json({ token: result.token, user: result.user });
+});
+
+// Выход
+app.post('/api/logout', (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (token) {
+        db.logout(token);
+    }
+    res.json({ success: true });
+});
+
+// Получить текущего пользователя
+app.get('/api/me', (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    const user = db.validateToken(token);
+    
+    if (!user) {
+        return res.status(401).json({ error: 'Не авторизован' });
+    }
+    
+    res.json({ user });
+});
+
+// Обновить профиль
+app.put('/api/profile', (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    const user = db.validateToken(token);
+    
+    if (!user) {
+        return res.status(401).json({ error: 'Не авторизован' });
+    }
+    
+    const updated = db.updateProfile(user.id, req.body);
+    res.json({ user: updated });
+});
+
+// Сохранить результат игры
+app.post('/api/game-result', (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    const user = db.validateToken(token);
+    
+    if (!user) {
+        return res.status(401).json({ error: 'Не авторизован' });
+    }
+    
+    const updated = db.addGameResult(user.id, req.body);
+    res.json({ user: updated });
+});
+
+// Глобальный лидерборд
+app.get('/api/leaderboard', (req, res) => {
+    const leaderboard = db.getLeaderboard(20);
+    res.json({ leaderboard });
+});
+
+// История игр
+app.get('/api/history', (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    const user = db.validateToken(token);
+    
+    if (!user) {
+        return res.status(401).json({ error: 'Не авторизован' });
+    }
+    
+    const history = db.getGameHistory(user.id);
+    res.json({ history });
 });
 
 // Self-ping каждые 30 секунд чтобы не засыпал на Render
@@ -118,7 +229,10 @@ function createRoom(ws, message) {
             avatarUrl: message.avatarUrl || '',
             score: 0,
             wins: 0,
-            gamesPlayed: 0
+            gamesPlayed: 0,
+            level: message.level || 1,
+            xp: message.xp || 0,
+            title: message.title || null
         }],
         gameStarted: false,
         startArticle: null,
@@ -137,7 +251,10 @@ function createRoom(ws, message) {
             id: p.id,
             color: p.color,
             borderStyle: p.borderStyle,
-            avatarUrl: p.avatarUrl || ''
+            avatarUrl: p.avatarUrl || '',
+            level: p.level || 1,
+            xp: p.xp || 0,
+            title: p.title || null
         }))
     };
     console.log('📤 room_created:', JSON.stringify(response));
@@ -175,7 +292,10 @@ function joinRoom(ws, message) {
         avatarUrl: message.avatarUrl || '',
         score: 0,
         wins: 0,
-        gamesPlayed: 0
+        gamesPlayed: 0,
+        level: message.level || 1,
+        xp: message.xp || 0,
+        title: message.title || null
     };
     room.players.push(player);
     ws.roomCode = message.code;
@@ -188,7 +308,10 @@ function joinRoom(ws, message) {
         borderStyle: p.borderStyle,
         avatarUrl: p.avatarUrl || '',
         score: p.score || 0,
-        wins: p.wins || 0
+        wins: p.wins || 0,
+        level: p.level || 1,
+        xp: p.xp || 0,
+        title: p.title || null
     }));
 
     // Send room_joined to the new player
@@ -351,7 +474,10 @@ function profileUpdate(ws, message) {
         color: p.color,
         borderStyle: p.borderStyle,
         avatarUrl: p.avatarUrl || '',
-        ready: p.ready || false
+        ready: p.ready || false,
+        level: p.level || 1,
+        xp: p.xp || 0,
+        title: p.title || null
     }));
 
     // Broadcast to all players in room
@@ -382,7 +508,10 @@ function lobbyReady(ws, message) {
         id: p.id,
         color: p.color,
         borderStyle: p.borderStyle,
-        ready: p.ready || false
+        ready: p.ready || false,
+        level: p.level || 1,
+        xp: p.xp || 0,
+        title: p.title || null
     }));
 
     // Send updated player list to all players
@@ -493,7 +622,10 @@ function playerReady(ws, message) {
         id: p.id,
         color: p.color,
         borderStyle: p.borderStyle,
-        ready: p.ready || false
+        ready: p.ready || false,
+        level: p.level || 1,
+        xp: p.xp || 0,
+        title: p.title || null
     }));
 
     // Send updated ready status to all players
@@ -527,7 +659,15 @@ function handleDisconnect(ws) {
         if (room.host === ws) {
             room.host = room.players[0].ws;
         }
-        const playerList = room.players.map(p => ({ name: p.name, id: p.id }));
+        const playerList = room.players.map(p => ({
+            name: p.name,
+            id: p.id,
+            color: p.color,
+            borderStyle: p.borderStyle,
+            level: p.level || 1,
+            xp: p.xp || 0,
+            title: p.title || null
+        }));
         room.players.forEach(p => {
             p.ws.send(JSON.stringify({ type: 'player_left', players: playerList }));
         });

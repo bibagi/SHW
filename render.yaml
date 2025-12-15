@@ -7,4 +7,10 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: DATA_DIR
+        value: /opt/render/project/src/data
     healthCheckPath: /health
+    disk:
+      name: wiki-race-data
+      mountPath: /opt/render/project/src/data
+      sizeGB: 1

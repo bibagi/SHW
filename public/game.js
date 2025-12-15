@@ -23,8 +23,660 @@ let gameState = {
     timeLimitSeconds: 120,
     teleportInterval: null,
     timeLimitInterval: null,
-    onlineCount: 0
+    onlineCount: 0,
+    authToken: null,
+    currentUser: null,
+    isGuest: true
 };
+
+// ========== СИСТЕМА АВТОРИЗАЦИИ ==========
+
+// Получить токен из localStorage
+function getAuthToken() {
+    return localStorage.getItem('authToken');
+}
+
+// Сохранить токен
+function setAuthToken(token) {
+    if (token) {
+        localStorage.setItem('authToken', token);
+        gameState.authToken = token;
+    } else {
+        localStorage.removeItem('authToken');
+        gameState.authToken = null;
+    }
+}
+
+// API запрос с авторизацией
+async function apiRequest(endpoint, options = {}) {
+    const token = getAuthToken();
+    const headers = {
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` })
+    };
+    
+    const response = await fetch(endpoint, {
+        ...options,
+        headers: { ...headers, ...options.headers }
+    });
+    
+    return response.json();
+}
+
+// Проверить авторизацию при загрузке
+async function checkAuth() {
+    const token = getAuthToken();
+    if (!token) {
+        setGuestMode();
+        return;
+    }
+    
+    try {
+        const data = await apiRequest('/api/me');
+        if (data.user) {
+            setLoggedInUser(data.user);
+        } else {
+            setAuthToken(null);
+            setGuestMode();
+        }
+    } catch (e) {
+        console.error('Auth check failed:', e);
+        setGuestMode();
+    }
+}
+
+// Установить режим гостя
+function setGuestMode() {
+    gameState.isGuest = true;
+    gameState.currentUser = null;
+    updateAuthUI();
+}
+
+// Установить авторизованного пользователя
+function setLoggedInUser(user) {
+    gameState.isGuest = false;
+    gameState.currentUser = user;
+    gameState.playerName = user.display_name;
+    
+    // Обновить UI
+    const playerNameInput = document.getElementById('playerName');
+    if (playerNameInput) {
+        playerNameInput.value = user.display_name;
+        playerNameInput.disabled = true; // Нельзя менять имя если залогинен
+    }
+    
+    // Загрузить профиль из БД
+    loadProfileFromServer(user);
+    updateAuthUI();
+}
+
+// Загрузить профиль с сервера
+function loadProfileFromServer(user) {
+    const profile = {
+        xp: user.xp || 0,
+        level: user.level || 1,
+        totalGames: user.total_games || 0,
+        wins: user.wins || 0,
+        losses: user.losses || 0,
+        soloGames: user.solo_games || 0,
+        multiGames: user.multi_games || 0,
+        bestTime: user.best_time,
+        totalClicks: user.total_clicks || 0,
+        streak: user.streak || 0,
+        maxStreak: user.max_streak || 0,
+        title: user.title || null,   // { name, color }
+        badges: user.badges || []    // [{ id, name, desc, icon, size }]
+    };
+    
+    // Сохраняем локально для быстрого доступа
+    localStorage.setItem('wikiRaceProfile', JSON.stringify(profile));
+    
+    if (user.color) {
+        localStorage.setItem('userColor', user.color);
+    }
+    
+    updateProfileDisplay();
+    updateProfileAvatar();
+}
+
+// Обновить UI авторизации
+function updateAuthUI() {
+    const playerNameInput = document.getElementById('playerName');
+    const btnAuthMain = document.getElementById('btnAuthMain');
+    
+    if (gameState.isGuest) {
+        // Гость - показать кнопку входа
+        if (playerNameInput) playerNameInput.disabled = false;
+        if (btnAuthMain) {
+            btnAuthMain.classList.remove('hidden', 'logout');
+            btnAuthMain.onclick = showAuthModal;
+            btnAuthMain.textContent = 'Войти в аккаунт';
+        }
+    } else {
+        // Залогинен - заменить на кнопку выхода
+        if (playerNameInput) playerNameInput.disabled = true;
+        if (btnAuthMain) {
+            btnAuthMain.classList.remove('hidden');
+            btnAuthMain.classList.add('logout');
+            btnAuthMain.onclick = logout;
+            btnAuthMain.textContent = `Выйти из аккаунта`;
+        }
+    }
+}
+
+// Показать модалку авторизации
+function showAuthModal() {
+    const modal = document.getElementById('authModal');
+    if (modal) modal.classList.add('show');
+}
+
+// Скрыть модалку
+function hideAuthModal() {
+    const modal = document.getElementById('authModal');
+    if (modal) modal.classList.remove('show');
+    
+    // Очистить ошибки
+    document.getElementById('loginError').textContent = '';
+    document.getElementById('registerError').textContent = '';
+}
+
+// Переключить таб
+function switchAuthTab(tab) {
+    document.querySelectorAll('.auth-tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.tab === tab);
+    });
+    
+    document.getElementById('loginForm').classList.toggle('hidden', tab !== 'login');
+    document.getElementById('registerForm').classList.toggle('hidden', tab !== 'register');
+}
+
+// Обработка входа
+async function handleLogin(e) {
+    e.preventDefault();
+    
+    const username = document.getElementById('loginUsername').value;
+    const password = document.getElementById('loginPassword').value;
+    const errorEl = document.getElementById('loginError');
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    
+    submitBtn.disabled = true;
+    errorEl.textContent = '';
+    
+    try {
+        const data = await apiRequest('/api/login', {
+            method: 'POST',
+            body: JSON.stringify({ username, password })
+        });
+        
+        if (data.error) {
+            errorEl.textContent = data.error;
+        } else {
+            setAuthToken(data.token);
+            setLoggedInUser(data.user);
+            hideAuthModal();
+        }
+    } catch (e) {
+        errorEl.textContent = 'Ошибка соединения';
+    }
+    
+    submitBtn.disabled = false;
+}
+
+// Обработка регистрации
+async function handleRegister(e) {
+    e.preventDefault();
+    
+    const username = document.getElementById('regUsername').value;
+    const displayName = document.getElementById('regDisplayName').value;
+    const password = document.getElementById('regPassword').value;
+    const passwordConfirm = document.getElementById('regPasswordConfirm').value;
+    const errorEl = document.getElementById('registerError');
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    
+    if (password !== passwordConfirm) {
+        errorEl.textContent = 'Пароли не совпадают';
+        return;
+    }
+    
+    submitBtn.disabled = true;
+    errorEl.textContent = '';
+    
+    try {
+        const data = await apiRequest('/api/register', {
+            method: 'POST',
+            body: JSON.stringify({ username, password, displayName: displayName || username })
+        });
+        
+        if (data.error) {
+            errorEl.textContent = data.error;
+        } else {
+            setAuthToken(data.token);
+            setLoggedInUser(data.user);
+            hideAuthModal();
+        }
+    } catch (e) {
+        errorEl.textContent = 'Ошибка соединения';
+    }
+    
+    submitBtn.disabled = false;
+}
+
+// Играть как гость
+function playAsGuest() {
+    setGuestMode();
+    hideAuthModal();
+}
+
+// Выход
+async function logout() {
+    await apiRequest('/api/logout', { method: 'POST' });
+    setAuthToken(null);
+    setGuestMode();
+    
+    // Сбросить имя
+    const playerNameInput = document.getElementById('playerName');
+    if (playerNameInput) {
+        playerNameInput.value = '';
+        playerNameInput.disabled = false;
+    }
+    
+    // Сбросить локальный профиль
+    localStorage.removeItem('wikiRaceProfile');
+    updateProfileDisplay();
+}
+
+// ========== СИСТЕМА ТИТУЛОВ И ЗНАЧКОВ ==========
+// Титулы и значки загружаются из профиля пользователя (БД)
+// Формат титула в БД: { name: "Название", color: "#цвет" }
+// Формат значка в БД: { id: "id", name: "Название", desc: "Описание", icon: "url картинки", size: 32 }
+
+// Отрисовать титул
+function renderTitle(titleData) {
+    const titleEl = document.getElementById('profileTitle');
+    if (!titleEl) return;
+    
+    if (titleData && titleData.name) {
+        titleEl.textContent = titleData.name;
+        titleEl.style.color = titleData.color || 'var(--accent)';
+    } else {
+        titleEl.textContent = '';
+    }
+}
+
+// Отрисовать значки из БД
+function renderBadges(containerId, badges) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    if (!badges || badges.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+    
+    container.innerHTML = badges.map(badge => {
+        const size = badge.size || 32;
+        return `
+            <div class="badge" style="width: ${size}px; height: ${size}px;">
+                <img src="${badge.icon}" alt="${badge.name}" style="width: ${size - 8}px; height: ${size - 8}px;">
+                <div class="badge-tooltip">
+                    <div class="badge-tooltip-title">${badge.name}</div>
+                    <div class="badge-tooltip-desc">${badge.desc || ''}</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Показать попап профиля игрока
+function showPlayerPopup(e) {
+    const item = e.currentTarget;
+    const playerData = JSON.parse(item.dataset.player || '{}');
+    
+    // Удалить старый попап
+    hidePlayerPopup();
+    
+    const level = playerData.level || 1;
+    const xp = playerData.xp || 0;
+    const xpForLevel = getXPForLevel(level);
+    const xpForNext = getXPForLevel(level + 1);
+    const xpProgress = xp - xpForLevel;
+    const xpNeeded = xpForNext - xpForLevel;
+    const progressPercent = Math.min(100, (xpProgress / xpNeeded) * 100);
+    const circumference = 339.292;
+    const offset = circumference - (progressPercent / 100) * circumference;
+    
+    // Титул из данных игрока
+    const title = playerData.title || null;
+    const titleHtml = title ? `<div class="popup-title" style="color: ${title.color || 'var(--accent)'}">${title.name}</div>` : '';
+    
+    const popup = document.createElement('div');
+    popup.className = 'player-popup';
+    popup.innerHTML = `
+        <div class="popup-profile-card">
+            <div class="popup-top">
+                <div class="popup-avatar-ring">
+                    <svg class="xp-ring" viewBox="0 0 120 120">
+                        <circle class="xp-ring-bg" cx="60" cy="60" r="54"/>
+                        <circle class="xp-ring-fill" cx="60" cy="60" r="54" style="stroke-dashoffset: ${offset}"/>
+                    </svg>
+                    <div class="popup-avatar" style="background: ${playerData.color || '#b45328'}">
+                        ${playerData.name?.charAt(0).toUpperCase() || '?'}
+                    </div>
+                    <div class="popup-level">${level}</div>
+                </div>
+                <div class="popup-info">
+                    <div class="popup-name">${playerData.name || 'Игрок'}</div>
+                    ${titleHtml}
+                    <div class="popup-xp">${xpProgress}/${xpNeeded} XP</div>
+                </div>
+            </div>
+            <div class="popup-stats">
+                <div class="popup-stat">
+                    <span class="popup-stat-value">${playerData.wins || 0}</span>
+                    <span class="popup-stat-label">Побед</span>
+                </div>
+                <div class="popup-stat">
+                    <span class="popup-stat-value">${playerData.score || 0}</span>
+                    <span class="popup-stat-label">Очков</span>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(popup);
+    
+    // Позиционирование
+    const rect = item.getBoundingClientRect();
+    popup.style.left = `${rect.right + 10}px`;
+    popup.style.top = `${rect.top}px`;
+    
+    // Проверить выход за границы
+    const popupRect = popup.getBoundingClientRect();
+    if (popupRect.right > window.innerWidth) {
+        popup.style.left = `${rect.left - popupRect.width - 10}px`;
+    }
+    
+    setTimeout(() => popup.classList.add('show'), 10);
+}
+
+// Скрыть попап
+function hidePlayerPopup() {
+    const popup = document.querySelector('.player-popup');
+    if (popup) popup.remove();
+}
+
+// ========== СИСТЕМА ПРОФИЛЕЙ И УРОВНЕЙ ==========
+
+// Формула опыта для уровня: сколько XP нужно чтобы ДОСТИЧЬ этого уровня
+// Уровень 1 = 0 XP, Уровень 2 = 100 XP, Уровень 3 = 300 XP, и т.д.
+function getXPForLevel(level) {
+    if (level <= 1) return 0;
+    return (level - 1) * (level - 1) * 100;
+}
+
+// Получить уровень по опыту
+function getLevelFromXP(xp) {
+    let level = 1;
+    while (getXPForLevel(level + 1) <= xp) {
+        level++;
+    }
+    return level;
+}
+
+// Профиль игрока по умолчанию
+function getDefaultProfile() {
+    return {
+        xp: 0,
+        level: 1,
+        totalGames: 0,
+        wins: 0,
+        losses: 0,
+        soloGames: 0,
+        multiGames: 0,
+        bestTime: null,
+        totalClicks: 0,
+        streak: 0,
+        maxStreak: 0
+    };
+}
+
+// Загрузить профиль
+function loadProfile() {
+    const saved = localStorage.getItem('wikiRaceProfile');
+    if (saved) {
+        return { ...getDefaultProfile(), ...JSON.parse(saved) };
+    }
+    return getDefaultProfile();
+}
+
+// Сохранить профиль
+function saveProfile(profile) {
+    localStorage.setItem('wikiRaceProfile', JSON.stringify(profile));
+    updateProfileDisplay();
+}
+
+// Рассчитать XP за одиночную игру
+function calculateSoloXP(timeSeconds, clicks) {
+    // Базовый XP: 50
+    // Бонус за скорость: до +100 XP (если меньше 60 сек)
+    // Штраф за время: -1 XP за каждые 10 сек после 2 минут
+    // Бонус за мало кликов: до +50 XP
+    
+    let xp = 50;
+    
+    // Бонус за скорость
+    if (timeSeconds < 60) {
+        xp += Math.floor((60 - timeSeconds) * 1.5);
+    } else if (timeSeconds < 120) {
+        xp += Math.floor((120 - timeSeconds) * 0.5);
+    } else {
+        // Штраф за долгую игру
+        xp -= Math.floor((timeSeconds - 120) / 10);
+    }
+    
+    // Бонус за мало кликов
+    if (clicks <= 3) {
+        xp += 50;
+    } else if (clicks <= 5) {
+        xp += 30;
+    } else if (clicks <= 10) {
+        xp += 10;
+    }
+    
+    return Math.max(10, xp); // Минимум 10 XP
+}
+
+// Рассчитать XP за мультиплеер
+function calculateMultiXP(isWinner, timeSeconds, playersCount) {
+    let xp = 30; // Базовый XP за участие
+    
+    if (isWinner) {
+        // Победа: базовый бонус + бонус за количество игроков
+        xp += 100 + (playersCount - 1) * 20;
+        
+        // Бонус за быструю победу
+        if (timeSeconds < 60) {
+            xp += 50;
+        } else if (timeSeconds < 120) {
+            xp += 25;
+        }
+    }
+    
+    return xp;
+}
+
+// Добавить XP и обновить профиль после игры
+function addGameResult(isSolo, isWinner, timeSeconds, clicks, playersCount = 1) {
+    const profile = loadProfile();
+    const oldLevel = profile.level;
+    
+    // Рассчитать XP
+    let xpGained;
+    if (isSolo) {
+        xpGained = calculateSoloXP(timeSeconds, clicks);
+        profile.soloGames++;
+        profile.wins++; // В соло всегда победа если дошёл
+    } else {
+        xpGained = calculateMultiXP(isWinner, timeSeconds, playersCount);
+        profile.multiGames++;
+        if (isWinner) {
+            profile.wins++;
+            profile.streak++;
+            profile.maxStreak = Math.max(profile.maxStreak, profile.streak);
+        } else {
+            profile.losses++;
+            profile.streak = 0;
+        }
+    }
+    
+    // Бонус за серию побед
+    if (profile.streak >= 3) {
+        xpGained = Math.floor(xpGained * 1.2);
+    }
+    if (profile.streak >= 5) {
+        xpGained = Math.floor(xpGained * 1.1);
+    }
+    
+    profile.xp += xpGained;
+    profile.totalGames++;
+    profile.totalClicks += clicks;
+    profile.level = getLevelFromXP(profile.xp);
+    
+    // Лучшее время
+    if (isWinner && (!profile.bestTime || timeSeconds < profile.bestTime)) {
+        profile.bestTime = timeSeconds;
+    }
+    
+    saveProfile(profile);
+    
+    // Если авторизован - сохранить на сервер
+    if (!gameState.isGuest && gameState.authToken) {
+        saveGameResultToServer(isSolo, isWinner, timeSeconds, clicks, xpGained);
+    }
+    
+    // Показать уведомление
+    const newLevel = profile.level;
+    showXPNotification(xpGained, newLevel > oldLevel ? newLevel : null);
+    
+    return { xpGained, levelUp: newLevel > oldLevel, newLevel };
+}
+
+// Сохранить результат на сервер
+async function saveGameResultToServer(isSolo, isWinner, timeSeconds, clicks, xpGained) {
+    try {
+        const data = await apiRequest('/api/game-result', {
+            method: 'POST',
+            body: JSON.stringify({
+                isSolo,
+                isWinner,
+                timeSeconds,
+                clicks,
+                xpGained,
+                targetArticle: gameState.targetArticle
+            })
+        });
+        
+        if (data.user) {
+            loadProfileFromServer(data.user);
+        }
+    } catch (e) {
+        console.error('Failed to save game result:', e);
+    }
+}
+
+// Показать уведомление о полученном XP
+function showXPNotification(xp, newLevel) {
+    const notification = document.createElement('div');
+    notification.className = 'xp-notification';
+    notification.innerHTML = `
+        <span class="xp-amount">+${xp} XP</span>
+        ${newLevel ? `<span class="level-up">🎉 Уровень ${newLevel}!</span>` : ''}
+    `;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => notification.classList.add('show'), 10);
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+
+// Обновить отображение профиля
+function updateProfileDisplay() {
+    const profile = loadProfile();
+    const currentXP = profile.xp || 0;
+    
+    // Пересчитать уровень на основе XP (на случай если он не обновился)
+    const currentLevel = getLevelFromXP(currentXP);
+    
+    // Обновить уровень в профиле если он изменился
+    if (profile.level !== currentLevel) {
+        profile.level = currentLevel;
+        saveProfile(profile);
+    }
+    
+    const xpForCurrentLevel = getXPForLevel(currentLevel);
+    const xpForNextLevel = getXPForLevel(currentLevel + 1);
+    const xpProgress = currentXP - xpForCurrentLevel;
+    const xpNeeded = xpForNextLevel - xpForCurrentLevel;
+    const progressPercent = Math.min(100, (xpProgress / xpNeeded) * 100);
+    
+    // Обновить элементы UI
+    const levelEl = document.getElementById('profileLevel');
+    const xpRingEl = document.getElementById('xpRingFill');
+    const xpBarEl = document.getElementById('xpBarFill');
+    const xpTextEl = document.getElementById('profileXPText');
+    const winsEl = document.getElementById('profileWins');
+    const gamesEl = document.getElementById('profileGames');
+    const titleEl = document.getElementById('profileTitle');
+    
+    if (levelEl) levelEl.textContent = currentLevel;
+    
+    // Обновить SVG кольцо XP (окружность = 2 * PI * 54 = 339.292)
+    if (xpRingEl) {
+        const circumference = 339.292;
+        const offset = circumference - (progressPercent / 100) * circumference;
+        xpRingEl.style.strokeDashoffset = offset;
+    }
+    
+    // Обновить мини XP бар
+    if (xpBarEl) {
+        xpBarEl.style.width = `${progressPercent}%`;
+    }
+    
+    if (xpTextEl) xpTextEl.textContent = `${xpProgress}/${xpNeeded} XP`;
+    if (winsEl) winsEl.textContent = profile.wins;
+    if (gamesEl) gamesEl.textContent = profile.totalGames;
+    
+    // Обновить второй элемент уровня (в статистике)
+    const level2El = document.getElementById('profileLevel2');
+    if (level2El) level2El.textContent = currentLevel;
+    
+    // Обновить титул из профиля (из БД)
+    if (profile.title) {
+        renderTitle(profile.title);
+    } else {
+        renderTitle(null);
+    }
+    
+    // Обновить значки из профиля (из БД)
+    if (profile.badges && profile.badges.length > 0) {
+        renderBadges('profileBadges', profile.badges);
+    } else {
+        renderBadges('profileBadges', []);
+    }
+}
+
+// Обновить аватар профиля
+function updateProfileAvatar() {
+    const userAvatar = document.getElementById('userAvatar');
+    const nick = gameState.playerName || 'Игрок';
+    if (userAvatar) {
+        userAvatar.textContent = nick.charAt(0).toUpperCase();
+        const color = localStorage.getItem('userColor') || '#b45328';
+        userAvatar.style.background = color;
+    }
+}
 
 // Generate unique player ID
 function generatePlayerId() {
@@ -727,6 +1379,9 @@ function updatePlayersListPanel(players) {
             const isHost = index === 0;
             const color = p.color || '#666';
             const isReady = p.ready || false;
+            const level = p.level || 1;
+            const title = p.title || null;
+            const titleHtml = title ? `<div class="player-item-title" style="color: ${title.color || 'var(--muted-foreground)'}">${title.name}</div>` : '';
 
             // Status icon
             let statusClass = '';
@@ -740,19 +1395,25 @@ function updatePlayersListPanel(players) {
             }
 
             return `
-                <div class="player-item ${isHost ? 'is-host' : ''}">
+                <div class="player-item ${isHost ? 'is-host' : ''}" data-player='${JSON.stringify(p)}'>
                     <div class="player-item-avatar" style="background: ${color};">
                         ${p.name.charAt(0).toUpperCase()}
-                        ${isHost ? '<span class="host-crown">👑</span>' : ''}
+                        <span class="player-level-mini">${level}</span>
                     </div>
                     <div class="player-item-info">
                         <div class="player-item-name">${p.name}</div>
-                        ${isHost ? '<div class="player-item-role">Хост</div>' : ''}
+                        ${titleHtml}
                     </div>
                     <div class="player-item-status ${statusClass}">${statusIcon}</div>
                 </div>
             `;
         }).join('');
+        
+        // Добавить обработчики наведения
+        list.querySelectorAll('.player-item').forEach(item => {
+            item.addEventListener('mouseenter', showPlayerPopup);
+            item.addEventListener('mouseleave', hidePlayerPopup);
+        });
     }
 
     // Update ready progress bar
@@ -941,6 +1602,7 @@ function saveNickname(name) {
     if (playerNameInput) playerNameInput.value = name;
 
     updateUserDisplay();
+    updateProfileAvatar();
 }
 
 // Get leaderboard from localStorage
@@ -1089,25 +1751,25 @@ function createRoom() {
 
     const customization = getUserCustomization();
 
+    const profile = loadProfile();
+    const roomData = {
+        type: 'create_room',
+        playerName: gameState.playerName,
+        color: customization.color,
+        borderStyle: customization.borderStyle,
+        avatarUrl: customization.avatarUrl,
+        level: profile.level || 1,
+        xp: profile.xp || 0,
+        title: profile.title || null
+    };
+
     if (!gameState.ws || gameState.ws.readyState !== WebSocket.OPEN) {
         connectWebSocket();
         setTimeout(() => {
-            gameState.ws.send(JSON.stringify({
-                type: 'create_room',
-                playerName: gameState.playerName,
-                color: customization.color,
-                borderStyle: customization.borderStyle,
-                avatarUrl: customization.avatarUrl
-            }));
+            gameState.ws.send(JSON.stringify(roomData));
         }, 500);
     } else {
-        gameState.ws.send(JSON.stringify({
-            type: 'create_room',
-            playerName: gameState.playerName,
-            color: customization.color,
-            borderStyle: customization.borderStyle,
-            avatarUrl: customization.avatarUrl
-        }));
+        gameState.ws.send(JSON.stringify(roomData));
     }
 }
 
@@ -1141,28 +1803,27 @@ function joinRoomConfirm() {
     saveNickname(gameState.playerName);
 
     const customization = getUserCustomization();
+    const profile = loadProfile();
+    
+    const joinData = {
+        type: 'join_room',
+        code,
+        playerName: gameState.playerName,
+        color: customization.color,
+        borderStyle: customization.borderStyle,
+        avatarUrl: customization.avatarUrl,
+        level: profile.level || 1,
+        xp: profile.xp || 0,
+        title: profile.title || null
+    };
 
     if (!gameState.ws || gameState.ws.readyState !== WebSocket.OPEN) {
         connectWebSocket();
         setTimeout(() => {
-            gameState.ws.send(JSON.stringify({
-                type: 'join_room',
-                code,
-                playerName: gameState.playerName,
-                color: customization.color,
-                borderStyle: customization.borderStyle,
-                avatarUrl: customization.avatarUrl
-            }));
+            gameState.ws.send(JSON.stringify(joinData));
         }, 500);
     } else {
-        gameState.ws.send(JSON.stringify({
-            type: 'join_room',
-            code,
-            playerName: gameState.playerName,
-            color: customization.color,
-            borderStyle: customization.borderStyle,
-            avatarUrl: customization.avatarUrl
-        }));
+        gameState.ws.send(JSON.stringify(joinData));
     }
 
     // Slide will happen when room_joined message is received
@@ -1642,6 +2303,10 @@ function showResults(clicks, time, target) {
     // Add to leaderboard (only for single player)
     if (!gameState.roomCode) {
         addToLeaderboard(gameState.playerName, time);
+        
+        // Добавить XP за одиночную игру
+        const timeSeconds = timeToSeconds(time);
+        addGameResult(true, true, timeSeconds, clicks);
     }
 
     // Show winner info if in multiplayer
@@ -1683,6 +2348,12 @@ function showMultiplayerResults(winnerName, time, target, leaderboard) {
     if (leaderboard && leaderboard.length > 0) {
         updateLeaderboard(leaderboard);
     }
+    
+    // Добавить XP за мультиплеер
+    const isWinner = winnerName === gameState.playerName;
+    const timeSeconds = timeToSeconds(time);
+    const playersCount = leaderboard ? leaderboard.length : 2;
+    addGameResult(false, isWinner, timeSeconds, gameState.clickCount, playersCount);
 
     // Setup ready system
     setupMultiplayerResults();
@@ -2043,8 +2714,25 @@ function setUserColor(color) {
     applyAvatarStyle(avatar);
     applyAvatarStyle(avatarPreviewLarge);
 
+    // Сохранить на сервер если авторизован
+    if (!gameState.isGuest && gameState.authToken) {
+        saveColorToServer(color);
+    }
+
     // Broadcast to other players
     broadcastProfileUpdate();
+}
+
+// Сохранить цвет на сервер
+async function saveColorToServer(color) {
+    try {
+        await apiRequest('/api/profile', {
+            method: 'PUT',
+            body: JSON.stringify({ color })
+        });
+    } catch (e) {
+        console.error('Failed to save color:', e);
+    }
 }
 
 // Border style functions
@@ -2434,7 +3122,10 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 DOM loaded, initializing...');
 
     try {
-        // Load saved nickname
+        // Проверить авторизацию
+        checkAuth();
+        
+        // Load saved nickname (для гостей)
         loadNickname();
 
         // Load user color
@@ -2445,6 +3136,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Display leaderboard
         displayLeaderboard();
+        
+        // Load and display profile
+        updateProfileDisplay();
+        updateProfileAvatar();
     } catch (e) {
         console.error('Init error:', e);
     }

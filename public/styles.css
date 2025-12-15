@@ -161,33 +161,570 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 20px;
-    max-width: 400px;
-    width: 90%;
-    padding: 40px 20px;
+    gap: 0;
+    max-width: 700px;
+    width: 95%;
+    padding: 30px 20px;
+}
+
+.menu-header {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
 }
 
 .menu-title {
-    font-size: 2.2rem;
+    font-size: 2rem;
     font-weight: 800;
-    text-align: center;
+    text-align: left;
     line-height: 1.2;
 }
 
 .title-accent {
     display: block;
     color: var(--primary);
-    font-size: 2.6rem;
+    font-size: 2.4rem;
 }
 
 .menu-desc {
     color: var(--muted-foreground);
-    font-size: 0.95rem;
-    text-align: center;
+    font-size: 0.9rem;
+    text-align: left;
     line-height: 1.5;
+    margin-top: 8px;
 }
 
-/* Player Card */
+/* Двухколоночный layout */
+.menu-layout {
+    display: flex;
+    gap: 16px;
+    width: auto;
+    align-items: stretch;
+    justify-content: center;
+}
+
+.menu-left {
+    flex: 0 0 300px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 12px;
+    width: 300px;
+}
+
+.menu-right {
+    flex: 0 0 300px;
+    width: 300px;
+    display: flex;
+    justify-content: flex-start;
+    align-items: stretch;
+}
+
+/* Карточка профиля - NFT стиль */
+.profile-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* Аватарка - кружок */
+.profile-avatar-wrap {
+    position: relative;
+    width: 150px;
+    height: 150px;
+    cursor: pointer;
+    margin: 24px auto 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.profile-avatar-wrap:hover .profile-avatar {
+    transform: scale(1.05);
+}
+
+.profile-card .profile-avatar {
+    width: 125px !important;
+    height: 125px !important;
+    border-radius: 50%;
+    background: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3.5rem;
+    font-weight: 700;
+    color: white;
+    transition: transform 0.3s ease;
+    z-index: 1;
+}
+
+/* XP кольцо */
+.profile-xp-ring {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.profile-xp-ring svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.profile-xp-ring .ring-bg {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.15);
+    stroke-width: 4;
+}
+
+.profile-xp-ring .ring-fill {
+    fill: none;
+    stroke: var(--primary);
+    stroke-width: 4;
+    stroke-linecap: round;
+    stroke-dasharray: 289;
+    stroke-dashoffset: 289;
+    transition: stroke-dashoffset 0.5s ease;
+}
+
+/* Уровень - бейдж в углу аватарки */
+.profile-level {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    width: auto;
+    height: auto;
+    padding: 5px 10px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #fff;
+    z-index: 10;
+}
+
+.profile-level::before {
+    content: 'LVL ';
+    font-weight: 500;
+    opacity: 0.7;
+}
+
+/* Контент карточки */
+.profile-card-content {
+    width: 100%;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Ник */
+.profile-nick {
+    background: transparent;
+    border: none;
+    padding: 16px 20px 0;
+    color: #fff;
+    font-size: 1.4rem;
+    font-weight: 800;
+    font-family: inherit;
+    outline: none;
+    width: 100%;
+    text-align: center;
+}
+
+.profile-nick::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+/* Титул */
+.profile-title {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--primary);
+    padding: 6px 14px;
+    margin: 0 auto;
+    background: rgba(var(--primary), 0.1);
+    background: linear-gradient(135deg, rgba(212, 105, 58, 0.15) 0%, rgba(212, 105, 58, 0.05) 100%);
+    border: 1px solid rgba(212, 105, 58, 0.3);
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.profile-title:empty {
+    display: none;
+}
+
+/* Значки */
+.profile-badges {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 0 20px;
+}
+
+.profile-badges:empty {
+    display: none;
+}
+
+.badge {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    transition: transform 0.2s, background 0.2s;
+}
+
+.badge:hover {
+    transform: scale(1.15);
+    background: var(--secondary);
+}
+
+.badge img {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+}
+
+/* Статистика - тёмные блоки */
+.profile-stats {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    padding: 12px 20px 20px;
+}
+
+.profile-stat {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 14px 12px;
+    background: var(--muted);
+    border-radius: 14px;
+}
+
+.stat-label {
+    font-size: 0.65rem;
+    color: var(--muted-foreground);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 500;
+}
+
+.stat-value {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--primary);
+}
+
+/* XP - под рамкой */
+.profile-xp {
+    width: 100%;
+    padding: 0;
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+.xp-text {
+    font-size: 0.85rem;
+    color: var(--muted-foreground);
+    font-weight: 500;
+}
+
+.badge {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    background: var(--muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    transition: transform 0.2s;
+}
+
+.badge:hover {
+    transform: scale(1.15);
+    z-index: 10;
+}
+
+.badge img {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+}
+
+.badge-tooltip {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--background);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    white-space: nowrap;
+    font-size: 0.75rem;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s;
+    z-index: 100;
+    pointer-events: none;
+}
+
+.badge-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: var(--border);
+}
+
+.badge:hover .badge-tooltip {
+    opacity: 1;
+    visibility: visible;
+}
+
+.badge-tooltip-title {
+    font-weight: 600;
+    color: var(--foreground);
+}
+
+.badge-tooltip-desc {
+    color: var(--muted-foreground);
+    margin-top: 2px;
+}
+}
+
+.xp-current {
+    font-size: 0.9rem;
+    color: var(--muted-foreground);
+    font-weight: 500;
+}
+
+/* Статистика */
+.profile-stats {
+    display: flex;
+    width: 100%;
+    gap: 8px;
+}
+
+.profile-stat {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 10px 8px;
+    background: var(--muted);
+    border-radius: var(--radius);
+}
+
+.stat-value {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: var(--primary);
+    line-height: 1;
+}
+
+.stat-label {
+    font-size: 0.6rem;
+    color: var(--muted-foreground);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+/* Кнопка авторизации в карточке */
+.btn-auth-card {
+    width: calc(100% - 40px);
+    margin: 0 20px 20px;
+    padding: 14px 20px;
+    background: var(--primary);
+    border: none;
+    border-radius: 14px;
+    color: white;
+    font-size: 0.9rem;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-auth-card:hover {
+    filter: brightness(1.1);
+    transform: translateY(-2px);
+}
+
+.btn-auth-card.logout {
+    background: var(--muted);
+    color: var(--muted-foreground);
+}
+
+.btn-auth-card.logout:hover {
+    background: var(--destructive);
+    color: white;
+}
+
+/* Адаптив для мобильных */
+@media (max-width: 800px) {
+    .menu-layout {
+        flex-direction: column;
+    }
+    
+    .menu-left, .menu-right {
+        max-width: 100%;
+    }
+    
+    .menu-center {
+        max-width: 450px;
+    }
+}
+
+/* Profile Row - всё в одной строке */
+.profile-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: calc(var(--radius) + 4px);
+    padding: 10px 14px;
+    width: 100%;
+}
+
+.profile-row .profile-avatar-wrap {
+    position: relative;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.profile-row .player-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--primary-foreground);
+    transition: transform 0.2s;
+}
+
+.profile-row .player-avatar:hover { transform: scale(1.05); }
+
+.profile-row .profile-level-badge {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 20px;
+    height: 20px;
+    background: var(--accent);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: var(--background);
+    border: 2px solid var(--card);
+}
+
+.profile-row .player-name-input {
+    flex: 1;
+    min-width: 80px;
+    max-width: 140px;
+    background: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px 10px;
+    color: var(--foreground);
+    font-size: 0.9rem;
+    font-family: inherit;
+    outline: none;
+}
+
+.profile-row .player-name-input:focus { border-color: var(--primary); }
+.profile-row .player-name-input::placeholder { color: var(--muted-foreground); }
+
+.profile-xp-section {
+    flex: 1;
+    min-width: 60px;
+    max-width: 100px;
+}
+
+.profile-row .profile-xp-bar {
+    height: 6px;
+    background: var(--muted);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 2px;
+}
+
+.profile-row .profile-xp-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--accent));
+    border-radius: 3px;
+    transition: width 0.5s ease;
+}
+
+.profile-row .profile-xp-text {
+    font-size: 0.6rem;
+    color: var(--muted-foreground);
+    text-align: center;
+}
+
+.profile-row .profile-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0 8px;
+    border-left: 1px solid var(--border);
+}
+
+.profile-row .profile-stat-value {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--primary);
+    line-height: 1;
+}
+
+.profile-row .profile-stat-label {
+    font-size: 0.55rem;
+    color: var(--muted-foreground);
+    text-transform: uppercase;
+}
+
+/* Legacy player-card (для совместимости) */
 .player-card {
     display: flex;
     align-items: center;
@@ -312,13 +849,13 @@ body {
 .menu-buttons {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
     width: 100%;
 }
 
 .btn-row {
     display: flex;
-    gap: 12px;
+    gap: 8px;
 }
 
 .btn-row .btn-play { flex: 1; }
@@ -3101,4 +3638,735 @@ body:has(#game.active) .site-footer {
     font-size: 1.1rem;
     font-weight: 800;
     color: var(--primary);
+}
+
+/* ========== PROFILE & XP SYSTEM ========== */
+.profile-widget {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 16px;
+}
+
+.profile-avatar-wrap {
+    position: relative;
+}
+
+.profile-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: white;
+}
+
+.profile-level-badge {
+    position: absolute;
+    bottom: -4px;
+    right: -4px;
+    width: 22px;
+    height: 22px;
+    background: var(--accent);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 800;
+    color: var(--background);
+    border: 2px solid var(--card);
+}
+
+.profile-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.profile-name {
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 4px;
+}
+
+.profile-xp-bar {
+    height: 8px;
+    background: var(--muted);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 4px;
+}
+
+.profile-xp-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--accent));
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
+
+.profile-xp-text {
+    font-size: 0.7rem;
+    color: var(--muted-foreground);
+}
+
+.profile-stats {
+    display: flex;
+    gap: 16px;
+    text-align: center;
+}
+
+.profile-stat {
+    display: flex;
+    flex-direction: column;
+}
+
+.profile-stat-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.profile-stat-label {
+    font-size: 0.65rem;
+    color: var(--muted-foreground);
+    text-transform: uppercase;
+}
+
+/* XP Notification */
+.xp-notification {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-100px);
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    color: white;
+    padding: 12px 24px;
+    border-radius: 50px;
+    font-weight: 700;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    z-index: 10000;
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.xp-notification.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+}
+
+.xp-amount {
+    font-size: 1.2rem;
+}
+
+.level-up {
+    background: white;
+    color: var(--primary);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    animation: levelPulse 0.6s ease infinite;
+}
+
+@keyframes levelPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+/* Profile in navbar */
+.nav-profile {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    background: var(--muted);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.nav-profile:hover {
+    background: var(--secondary);
+}
+
+.nav-level {
+    width: 24px;
+    height: 24px;
+    background: var(--accent);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: var(--background);
+}
+
+.nav-xp-mini {
+    font-size: 0.7rem;
+    color: var(--muted-foreground);
+}
+
+
+/* ========== AUTH MODAL ========== */
+.auth-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.auth-modal.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.auth-modal-content {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: calc(var(--radius) + 8px);
+    padding: 32px;
+    width: 100%;
+    max-width: 380px;
+    position: relative;
+    transform: translateY(20px);
+    transition: transform 0.3s ease;
+}
+
+.auth-modal.show .auth-modal-content {
+    transform: translateY(0);
+}
+
+.auth-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    background: var(--muted);
+    border: none;
+    border-radius: 50%;
+    color: var(--foreground);
+    font-size: 1.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.auth-close:hover {
+    background: var(--destructive);
+}
+
+.auth-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+}
+
+.auth-tab {
+    flex: 1;
+    padding: 12px;
+    background: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--muted-foreground);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.auth-tab.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.auth-form.hidden {
+    display: none;
+}
+
+.auth-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.auth-field label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--muted-foreground);
+}
+
+.auth-field input {
+    padding: 12px 14px;
+    background: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--foreground);
+    font-size: 0.95rem;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.auth-field input:focus {
+    border-color: var(--primary);
+}
+
+.auth-field input::placeholder {
+    color: var(--muted-foreground);
+    opacity: 0.6;
+}
+
+.auth-error {
+    color: var(--destructive);
+    font-size: 0.85rem;
+    min-height: 20px;
+}
+
+.auth-submit {
+    padding: 14px;
+    background: var(--primary);
+    border: none;
+    border-radius: var(--radius);
+    color: white;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.auth-submit:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+}
+
+.auth-submit:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.auth-guest {
+    margin-top: 20px;
+    text-align: center;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+}
+
+.auth-guest span {
+    display: block;
+    color: var(--muted-foreground);
+    font-size: 0.85rem;
+    margin-bottom: 12px;
+}
+
+.auth-guest-btn {
+    padding: 10px 20px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--foreground);
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.auth-guest-btn:hover {
+    background: var(--muted);
+    border-color: var(--primary);
+}
+
+/* Кнопка входа в профиле */
+.profile-login-btn {
+    padding: 8px 14px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--muted-foreground);
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.profile-login-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: rgba(180, 83, 40, 0.1);
+}
+
+.profile-login-btn::before {
+    content: '👤';
+    font-size: 0.9rem;
+}
+
+/* Статус авторизации */
+.auth-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.75rem;
+    color: var(--muted-foreground);
+}
+
+.auth-status.logged-in {
+    color: var(--accent);
+}
+
+.auth-status-icon {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--muted-foreground);
+}
+
+.auth-status.logged-in .auth-status-icon {
+    background: var(--accent);
+}
+
+
+/* ========== AUTH BUTTON IN MENU ========== */
+.btn-auth {
+    position: relative;
+    width: 100%;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, var(--card) 0%, var(--secondary) 100%);
+    border: 1px solid var(--border);
+    border-radius: calc(var(--radius) + 4px);
+    cursor: pointer;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    margin-top: 8px;
+}
+
+.btn-auth:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(180, 83, 40, 0.2);
+}
+
+.btn-auth .auth-pattern {
+    position: absolute;
+    inset: 0;
+    background-image: 
+        radial-gradient(circle at 20% 30%, rgba(180, 83, 40, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 70%, rgba(130, 120, 57, 0.1) 0%, transparent 50%);
+    opacity: 0.5;
+}
+
+.btn-auth::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 10px,
+        rgba(180, 83, 40, 0.03) 10px,
+        rgba(180, 83, 40, 0.03) 20px
+    );
+}
+
+.btn-auth-content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.btn-auth-icon {
+    font-size: 1.8rem;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+}
+
+.btn-auth-text {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+}
+
+.btn-auth-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--foreground);
+}
+
+.btn-auth-desc {
+    font-size: 0.75rem;
+    color: var(--muted-foreground);
+}
+
+/* Скрыть когда залогинен */
+.btn-auth.hidden {
+    display: none;
+}
+
+/* Кнопка профиля когда залогинен */
+.btn-profile {
+    position: relative;
+    width: 100%;
+    padding: 12px 16px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: calc(var(--radius) + 4px);
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.btn-profile:hover {
+    border-color: var(--accent);
+}
+
+.btn-profile-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    color: white;
+}
+
+.btn-profile-info {
+    flex: 1;
+    text-align: left;
+}
+
+.btn-profile-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--foreground);
+}
+
+.btn-profile-level {
+    font-size: 0.7rem;
+    color: var(--muted-foreground);
+}
+
+.btn-profile-logout {
+    padding: 6px 10px;
+    background: var(--muted);
+    border: none;
+    border-radius: var(--radius);
+    color: var(--muted-foreground);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-profile-logout:hover {
+    background: var(--destructive);
+    color: white;
+}
+
+
+/* ========== PLAYER ITEM IMPROVEMENTS ========== */
+.player-item {
+    position: relative;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.player-item:hover {
+    background: var(--secondary);
+}
+
+.player-level-mini {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 16px;
+    height: 16px;
+    background: var(--accent);
+    border-radius: 50%;
+    font-size: 0.6rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--background);
+    border: 1px solid var(--card);
+}
+
+.player-item-title {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+/* ========== PLAYER POPUP ========== */
+.player-popup {
+    position: fixed;
+    z-index: 10000;
+    opacity: 0;
+    transform: translateX(-10px);
+    transition: all 0.2s ease;
+    pointer-events: none;
+}
+
+.player-popup.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.popup-profile-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    min-width: 200px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.popup-top {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.popup-avatar-ring {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    flex-shrink: 0;
+}
+
+.popup-avatar-ring .xp-ring {
+    position: absolute;
+    inset: 0;
+    transform: rotate(-90deg);
+}
+
+.popup-avatar-ring .xp-ring-bg {
+    stroke-width: 5;
+}
+
+.popup-avatar-ring .xp-ring-fill {
+    stroke-width: 5;
+}
+
+.popup-avatar {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    right: 6px;
+    bottom: 6px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: white;
+}
+
+.popup-level {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 20px;
+    height: 20px;
+    background: var(--accent);
+    border-radius: 50%;
+    font-size: 0.65rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--background);
+    border: 2px solid var(--card);
+}
+
+.popup-info {
+    flex: 1;
+}
+
+.popup-name {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--foreground);
+}
+
+.popup-title {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-top: 2px;
+}
+
+.popup-xp {
+    font-size: 0.7rem;
+    color: var(--muted-foreground);
+    margin-top: 4px;
+}
+
+.popup-stats {
+    display: flex;
+    gap: 8px;
+}
+
+.popup-stat {
+    flex: 1;
+    text-align: center;
+    padding: 8px;
+    background: var(--muted);
+    border-radius: 6px;
+}
+
+.popup-stat-value {
+    display: block;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.popup-stat-label {
+    font-size: 0.6rem;
+    color: var(--muted-foreground);
+    text-transform: uppercase;
 }

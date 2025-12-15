@@ -32,61 +32,111 @@
             <!-- Главное меню (центр) -->
             <div class="slide slide-menu active" id="slideMenu">
                 <div class="menu-center">
-                    <h1 class="menu-title">
-                        Шесть Рукопожатий
-                        <span class="title-accent">Википедии</span>
-                    </h1>
-                    <p class="menu-desc">
-                        Найди путь от главной страницы Wikipedia до случайной статьи
-                    </p>
-
-                    <!-- Профиль -->
-                    <div class="player-card">
-                        <div class="player-avatar" id="userAvatar" onclick="toggleColorPicker()">?</div>
-                        <input type="text" id="playerName" class="player-name-input" placeholder="Ваш ник"
-                            maxlength="20">
-                    </div>
-
-                    <!-- Режим 404 -->
-                    <div class="mode-card" id="death404Card">
-                        <div class="mode-header">
-                            <span class="mode-icon">404</span>
-                            <div class="mode-info">
-                                <span class="mode-title">Режим <span class="danger">Хардкор</span></span>
+                    <!-- Двухколоночный layout -->
+                    <div class="menu-layout">
+                        <!-- Левая колонка - заголовок + кнопки -->
+                        <div class="menu-left">
+                            <!-- Заголовок -->
+                            <div class="menu-header">
+                                <h1 class="menu-title">
+                                    Шесть Рукопожатий
+                                    <span class="title-accent">Википедии</span>
+                                </h1>
+                                <p class="menu-desc">
+                                    Найди путь от главной страницы Wikipedia до случайной статьи
+                                </p>
                             </div>
-                            <button class="mode-toggle" id="death404Toggle">OFF</button>
+                            
+                            <!-- Режим 404 -->
+                            <div class="mode-card" id="death404Card">
+                                <div class="mode-header">
+                                    <span class="mode-icon">404</span>
+                                    <div class="mode-info">
+                                        <span class="mode-title">Режим <span class="danger">Хардкор</span></span>
+                                    </div>
+                                    <button class="mode-toggle" id="death404Toggle">OFF</button>
+                                </div>
+                                <button class="modifiers-btn" id="modifiersTrigger">
+                                    Усложнения <span class="mod-count" id="modifiersCount">0</span>
+                                </button>
+                            </div>
+
+                            <!-- Кнопки -->
+                            <div class="menu-buttons">
+                                <button id="btnSinglePlayer" class="btn-play btn-solo">
+                                    <span class="btn-pattern"></span>
+                                    <span class="btn-icon-main">🎮</span>
+                                    <span class="btn-text">Одиночная игра</span>
+                                </button>
+
+                                <div class="btn-row">
+                                    <button id="btnCreateRoom" class="btn-play btn-create">
+                                        <span class="btn-pattern"></span>
+                                        <span class="btn-icon-main">➕</span>
+                                        <span class="btn-text">Создать</span>
+                                    </button>
+                                    <button id="btnJoinRoom" class="btn-play btn-join">
+                                        <span class="btn-pattern"></span>
+                                        <span class="btn-icon-main">🚪</span>
+                                        <span class="btn-text">Войти</span>
+                                    </button>
+                                </div>
+
+                                <button class="btn-how" id="btnHowToPlay">
+                                    <span class="btn-pattern"></span>
+                                    <span class="btn-icon-main">❓</span>
+                                    <span class="btn-text">Как играть</span>
+                                </button>
+                            </div>
                         </div>
-                        <button class="modifiers-btn" id="modifiersTrigger">
-                            Усложнения <span class="mod-count" id="modifiersCount">0</span>
-                        </button>
-                    </div>
 
-                    <!-- Кнопки -->
-                    <div class="menu-buttons">
-                        <button id="btnSinglePlayer" class="btn-play btn-solo">
-                            <span class="btn-pattern"></span>
-                            <span class="btn-icon-main">🎮</span>
-                            <span class="btn-text">Одиночная игра</span>
-                        </button>
+                        <!-- Правая колонка - профиль -->
+                        <div class="menu-right">
+                            <div class="profile-card">
+                                <!-- Аватарка -->
+                                <div class="profile-avatar-wrap" onclick="toggleColorPicker()">
+                                    <div class="profile-avatar" id="userAvatar">?</div>
+                                    <div class="profile-xp-ring">
+                                        <svg viewBox="0 0 100 100">
+                                            <circle class="ring-bg" cx="50" cy="50" r="46"/>
+                                            <circle class="ring-fill" id="xpRingFill" cx="50" cy="50" r="46"/>
+                                        </svg>
+                                    </div>
+                                    <div class="profile-level" id="profileLevel">1</div>
+                                </div>
+                                
+                                <!-- XP под рамкой -->
+                                <div class="profile-xp">
+                                    <span class="xp-text" id="profileXPText">0/100 XP</span>
+                                </div>
+                                
+                                <!-- Ник -->
+                                <input type="text" id="playerName" class="profile-nick" placeholder="Ваш ник" maxlength="20">
+                                
+                                <!-- Титул -->
+                                <div class="profile-title" id="profileTitle"></div>
+                                
+                                <!-- Значки -->
+                                <div class="profile-badges" id="profileBadges"></div>
+                                
+                                <!-- Статистика -->
+                                <div class="profile-stats">
+                                    <div class="profile-stat">
+                                        <span class="stat-label">Побед</span>
+                                        <span class="stat-value" id="profileWins">0</span>
+                                    </div>
+                                    <div class="profile-stat">
+                                        <span class="stat-label">Игр</span>
+                                        <span class="stat-value" id="profileGames">0</span>
+                                    </div>
+                                </div>
 
-                        <div class="btn-row">
-                            <button id="btnCreateRoom" class="btn-play btn-create">
-                                <span class="btn-pattern"></span>
-                                <span class="btn-icon-main">➕</span>
-                                <span class="btn-text">Создать</span>
-                            </button>
-                            <button id="btnJoinRoom" class="btn-play btn-join">
-                                <span class="btn-pattern"></span>
-                                <span class="btn-icon-main">🚪</span>
-                                <span class="btn-text">Войти</span>
-                            </button>
+                                <!-- Кнопка авторизации -->
+                                <button class="btn-auth-card" id="btnAuthMain" onclick="showAuthModal()">
+                                    Войти в аккаунт
+                                </button>
+                            </div>
                         </div>
-
-                        <button class="btn-how" id="btnHowToPlay">
-                            <span class="btn-pattern"></span>
-                            <span class="btn-icon-main">❓</span>
-                            <span class="btn-text">Как играть</span>
-                        </button>
                     </div>
                 </div>
             </div>
@@ -606,7 +656,7 @@
                     </div>
                     <div class="leaderboard-list" id="leaderboardList"></div>
                 </div>
-                
+
                 <div id="readySystem" class="ready-section">
                     <h4>Готовность к следующей игре</h4>
                     <div id="readyPlayersList"></div>
@@ -634,7 +684,62 @@
     <footer class="site-footer" id="siteFooter">
         <span>Сделано</span>
         <a href="https://github.com/bibagi" target="_blank" rel="noopener">iuwfe</a>
+        <span>в 2025 году</span>
     </footer>
+
+    <!-- Модалка авторизации -->
+    <div class="auth-modal" id="authModal">
+        <div class="auth-modal-content">
+            <button class="auth-close" onclick="hideAuthModal()">&times;</button>
+
+            <div class="auth-tabs">
+                <button class="auth-tab active" data-tab="login" onclick="switchAuthTab('login')">Вход</button>
+                <button class="auth-tab" data-tab="register" onclick="switchAuthTab('register')">Регистрация</button>
+            </div>
+
+            <!-- Форма входа -->
+            <form class="auth-form" id="loginForm" onsubmit="handleLogin(event)">
+                <div class="auth-field">
+                    <label>Логин</label>
+                    <input type="text" id="loginUsername" placeholder="Ваш логин" required>
+                </div>
+                <div class="auth-field">
+                    <label>Пароль</label>
+                    <input type="password" id="loginPassword" placeholder="Пароль" required>
+                </div>
+                <div class="auth-error" id="loginError"></div>
+                <button type="submit" class="auth-submit">Войти</button>
+            </form>
+
+            <!-- Форма регистрации -->
+            <form class="auth-form hidden" id="registerForm" onsubmit="handleRegister(event)">
+                <div class="auth-field">
+                    <label>Логин</label>
+                    <input type="text" id="regUsername" placeholder="Придумайте логин" minlength="3" maxlength="20"
+                        required>
+                </div>
+                <div class="auth-field">
+                    <label>Отображаемое имя</label>
+                    <input type="text" id="regDisplayName" placeholder="Как вас называть в игре" maxlength="20">
+                </div>
+                <div class="auth-field">
+                    <label>Пароль</label>
+                    <input type="password" id="regPassword" placeholder="Минимум 4 символа" minlength="4" required>
+                </div>
+                <div class="auth-field">
+                    <label>Повторите пароль</label>
+                    <input type="password" id="regPasswordConfirm" placeholder="Ещё раз пароль" required>
+                </div>
+                <div class="auth-error" id="registerError"></div>
+                <button type="submit" class="auth-submit">Зарегистрироваться</button>
+            </form>
+
+            <div class="auth-guest">
+                <span>или</span>
+                <button class="auth-guest-btn" onclick="playAsGuest()">Играть как гость</button>
+            </div>
+        </div>
+    </div>
 
     <script src="game.js"></script>
 </body>
