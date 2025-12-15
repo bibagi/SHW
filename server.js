@@ -1,7 +1,7 @@
 const express = require('express');
 const http = require('http');
+const https = require('https');
 const WebSocket = require('ws');
-const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
@@ -9,6 +9,23 @@ const wss = new WebSocket.Server({ server });
 
 app.use(express.static('public'));
 app.use(express.json());
+
+// Health check endpoint для Render
+app.get('/health', (req, res) => {
+    res.status(200).send('OK');
+});
+
+// Self-ping каждые 30 секунд чтобы не засыпал на Render
+const RENDER_URL = process.env.RENDER_EXTERNAL_URL;
+if (RENDER_URL) {
+    setInterval(() => {
+        https.get(`${RENDER_URL}/health`, (res) => {
+            console.log('🏓 Self-ping:', res.statusCode);
+        }).on('error', (err) => {
+            console.log('Self-ping error:', err.message);
+        });
+    }, 30000);
+}
 
 // Хранилище комнат
 const rooms = new Map();
@@ -92,27 +109,31 @@ function createRoom(ws, message) {
     const room = {
         code,
         host: ws,
-        players: [{ 
-            ws, 
-            name: message.playerName, 
+        players: [{
+            ws,
+            name: message.playerName,
             id: Date.now(),
             color: message.color || '#b45328',
             borderStyle: message.borderStyle || 'none',
-            avatarUrl: message.avatarUrl || ''
+            avatarUrl: message.avatarUrl || '',
+            score: 0,
+            wins: 0,
+            gamesPlayed: 0
         }],
         gameStarted: false,
         startArticle: null,
-        targetArticle: null
+        targetArticle: null,
+        leaderboard: []
     };
     rooms.set(code, room);
     ws.roomCode = code;
     ws.playerName = message.playerName;
-    
+
     const response = {
         type: 'room_created',
         code,
-        players: room.players.map(p => ({ 
-            name: p.name, 
+        players: room.players.map(p => ({
+            name: p.name,
             id: p.id,
             color: p.color,
             borderStyle: p.borderStyle,
@@ -137,7 +158,7 @@ function joinRoom(ws, message) {
         ws.send(JSON.stringify({ type: 'error', message: 'Комната заполнена' }));
         return;
     }
-    
+
     // Check if player already in room
     const existingPlayer = room.players.find(p => p.name === message.playerName);
     if (existingPlayer) {
@@ -145,35 +166,40 @@ function joinRoom(ws, message) {
         return;
     }
 
-    const player = { 
-        ws, 
-        name: message.playerName, 
+    const player = {
+        ws,
+        name: message.playerName,
         id: Date.now(),
         color: message.color || '#b45328',
         borderStyle: message.borderStyle || 'none',
-        avatarUrl: message.avatarUrl || ''
+        avatarUrl: message.avatarUrl || '',
+        score: 0,
+        wins: 0,
+        gamesPlayed: 0
     };
     room.players.push(player);
     ws.roomCode = message.code;
     ws.playerName = message.playerName;
 
-    const playerList = room.players.map(p => ({ 
-        name: p.name, 
+    const playerList = room.players.map(p => ({
+        name: p.name,
         id: p.id,
         color: p.color,
         borderStyle: p.borderStyle,
-        avatarUrl: p.avatarUrl || ''
+        avatarUrl: p.avatarUrl || '',
+        score: p.score || 0,
+        wins: p.wins || 0
     }));
-    
+
     // Send room_joined to the new player
-    const joinMsg = JSON.stringify({ 
-        type: 'room_joined', 
+    const joinMsg = JSON.stringify({
+        type: 'room_joined',
         code: message.code,
-        players: playerList 
+        players: playerList
     });
     console.log('📤 Sending room_joined to', message.playerName, ':', joinMsg);
     ws.send(joinMsg);
-    
+
     // Send current room settings to new player
     if (room.death404Mode || room.modifiers || room.timeLimitSeconds || room.maxPlayers) {
         ws.send(JSON.stringify({
@@ -184,14 +210,14 @@ function joinRoom(ws, message) {
             maxPlayers: room.maxPlayers || 8
         }));
     }
-    
+
     // Send player_joined to other players
     room.players.forEach(p => {
         if (p.ws !== ws) {
             p.ws.send(JSON.stringify({ type: 'player_joined', players: playerList }));
         }
     });
-    
+
     console.log('✓ Player', message.playerName, 'joined room', message.code);
 }
 
@@ -201,7 +227,7 @@ function startGame(ws, message) {
 
     room.gameStarted = true;
     room.gameFinished = false;
-    
+
     // Reset ready status for all players
     room.players.forEach(p => {
         p.ready = false;
@@ -223,7 +249,7 @@ function startGame(ws, message) {
 
 function playerFinished(ws, message) {
     console.log('playerFinished called. ws.roomCode:', ws.roomCode);
-    
+
     const room = rooms.get(ws.roomCode);
     if (!room) {
         console.log('❌ Room not found for player finish. Available rooms:', Array.from(rooms.keys()));
@@ -238,15 +264,42 @@ function playerFinished(ws, message) {
         targetArticle: message.targetArticle
     };
 
+    // Update scores
+    const winner = room.players.find(p => p.name === ws.playerName);
+    if (winner) {
+        winner.wins = (winner.wins || 0) + 1;
+        winner.score = (winner.score || 0) + 100; // 100 points for win
+        winner.gamesPlayed = (winner.gamesPlayed || 0) + 1;
+    }
+
+    // Give participation points to others
+    room.players.forEach(p => {
+        if (p.name !== ws.playerName) {
+            p.gamesPlayed = (p.gamesPlayed || 0) + 1;
+            p.score = (p.score || 0) + 10; // 10 points for participation
+        }
+    });
+
+    // Build leaderboard
+    const leaderboard = room.players
+        .map(p => ({
+            name: p.name,
+            score: p.score || 0,
+            wins: p.wins || 0,
+            color: p.color
+        }))
+        .sort((a, b) => b.score - a.score);
+
     console.log('✓ Game finished! Winner:', room.winner.name, 'Room:', ws.roomCode);
-    console.log('Players in room:', room.players.map(p => ({ name: p.name, wsReady: p.ws.readyState })));
+    console.log('Leaderboard:', leaderboard);
 
     // Send to all players in the room
     const gameFinishedMsg = JSON.stringify({
         type: 'game_finished',
         winner: room.winner.name,
         time: room.winner.time,
-        targetArticle: room.winner.targetArticle
+        targetArticle: room.winner.targetArticle,
+        leaderboard: leaderboard
     });
 
     room.players.forEach(p => {
@@ -316,10 +369,11 @@ function lobbyReady(ws, message) {
     const room = rooms.get(ws.roomCode);
     if (!room) return;
 
-    // Find player and mark as ready
+    // Find player and toggle ready status
     const player = room.players.find(p => p.ws === ws);
     if (player) {
-        player.ready = true;
+        // If message has explicit ready state, use it; otherwise toggle
+        player.ready = message.ready !== undefined ? message.ready : !player.ready;
     }
 
     // Prepare players list with ready status
@@ -339,7 +393,7 @@ function lobbyReady(ws, message) {
         }));
     });
 
-    console.log('✓ Player', ws.playerName, 'is ready in lobby');
+    console.log('✓ Player', ws.playerName, 'ready status:', player?.ready);
 }
 
 function updateRoomSettings(ws, message) {
@@ -402,7 +456,7 @@ function playerToLobby(ws, message) {
                     p.ready = false;
                     p.inLobby = true;
                 });
-                
+
                 // Send all players back to lobby with room info
                 const playerList = currentRoom.players.map(p => ({
                     name: p.name,
@@ -410,7 +464,7 @@ function playerToLobby(ws, message) {
                     color: p.color,
                     borderStyle: p.borderStyle
                 }));
-                
+
                 currentRoom.players.forEach(p => {
                     p.ws.send(JSON.stringify({
                         type: 'return_to_lobby',
@@ -466,7 +520,7 @@ function handleDisconnect(ws) {
     if (!room) return;
 
     room.players = room.players.filter(p => p.ws !== ws);
-    
+
     if (room.players.length === 0) {
         rooms.delete(ws.roomCode);
     } else {

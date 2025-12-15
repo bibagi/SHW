@@ -152,6 +152,7 @@ function handleServerMessage(message) {
             break;
         case 'lobby_ready_update':
             updatePlayersListPanel(message.players);
+            updateReadyButtonState(message.players);
             break;
         case 'players_update':
             updatePlayersListPanel(message.players);
@@ -176,7 +177,7 @@ function handleServerMessage(message) {
             gameState.gameActive = false;
             gameState.targetArticle = message.targetArticle;
             console.log('Calling showMultiplayerResults...');
-            showMultiplayerResults(message.winner, message.time, message.targetArticle);
+            showMultiplayerResults(message.winner, message.time, message.targetArticle, message.leaderboard);
             console.log('showMultiplayerResults called');
             break;
         case 'player_finished':
@@ -823,20 +824,45 @@ function updateStartButtonState(players) {
     }
 }
 
-// Send ready status in lobby
+// Send ready status in lobby (toggle)
 function sendReadyLobby() {
     if (gameState.ws && gameState.roomCode && !gameState.isHost) {
+        const btnReady = document.getElementById('btnReadyLobby');
+        const isCurrentlyReady = btnReady?.classList.contains('btn-ready-active');
+        
         gameState.ws.send(JSON.stringify({
             type: 'lobby_ready',
-            playerName: gameState.playerName
+            playerName: gameState.playerName,
+            ready: !isCurrentlyReady
         }));
 
         // Update button
-        const btnReady = document.getElementById('btnReadyLobby');
         if (btnReady) {
-            btnReady.textContent = '✓ Готов!';
-            btnReady.disabled = true;
+            if (isCurrentlyReady) {
+                btnReady.textContent = '✓ Готов';
+                btnReady.classList.remove('btn-ready-active');
+            } else {
+                btnReady.textContent = '✗ Отменить';
+                btnReady.classList.add('btn-ready-active');
+            }
+        }
+    }
+}
+
+// Update ready button state based on server data
+function updateReadyButtonState(players) {
+    if (gameState.isHost) return;
+    
+    const myPlayer = players.find(p => p.name === gameState.playerName);
+    const btnReady = document.getElementById('btnReadyLobby');
+    
+    if (btnReady && myPlayer) {
+        if (myPlayer.ready) {
+            btnReady.textContent = '✗ Отменить';
             btnReady.classList.add('btn-ready-active');
+        } else {
+            btnReady.textContent = '✓ Готов';
+            btnReady.classList.remove('btn-ready-active');
         }
     }
 }
@@ -1147,7 +1173,7 @@ async function startGameHost() {
     if (!gameState.isHost) return;
 
     const startArticle = 'Главная страница Wikipedia';
-    const targetArticle = await getRandomArticle();
+    const targetArticle = await getTargetArticle();
 
     gameState.ws.send(JSON.stringify({
         type: 'start_game',
@@ -1177,6 +1203,22 @@ function startCountdown() {
     }, 1000);
 }
 
+// Set target title with marquee if needed
+function setTargetTitle(text) {
+    const titleEl = document.getElementById('targetTitle');
+    const wrapper = titleEl.parentElement;
+    
+    titleEl.textContent = text;
+    titleEl.classList.remove('marquee');
+    
+    // Check if text overflows after a small delay
+    requestAnimationFrame(() => {
+        if (titleEl.scrollWidth > wrapper.clientWidth) {
+            titleEl.classList.add('marquee');
+        }
+    });
+}
+
 // Start actual game
 async function startGame() {
     gameState.gameActive = true;
@@ -1196,14 +1238,14 @@ async function startGame() {
 
     // Hidden target modifier - show only emoji hint
     if (gameState.modifiers.hiddenTarget) {
-        document.getElementById('targetTitle').textContent = '🎯 ❓❓❓';
+        setTargetTitle('🎯 ❓❓❓');
         document.getElementById('targetDescription').textContent = 'Название цели скрыто! Найди её по описанию...';
         // Show only first sentence as hint
         const description = await getArticleDescription(gameState.targetArticle);
         const firstSentence = description.split('.')[0] + '...';
         document.getElementById('targetDescription').textContent = firstSentence;
     } else {
-        document.getElementById('targetTitle').textContent = gameState.targetArticle;
+        setTargetTitle(gameState.targetArticle);
         // Load article description
         const description = await getArticleDescription(gameState.targetArticle);
         document.getElementById('targetDescription').textContent = description;
@@ -1618,8 +1660,8 @@ function showResults(clicks, time, target) {
 }
 
 // Show multiplayer results (for all players when someone wins)
-function showMultiplayerResults(winnerName, time, target) {
-    console.log('showMultiplayerResults called with:', { winnerName, time, target });
+function showMultiplayerResults(winnerName, time, target, leaderboard) {
+    console.log('showMultiplayerResults called with:', { winnerName, time, target, leaderboard });
 
     showScreen('results');
     console.log('Screen changed to results');
@@ -1637,10 +1679,35 @@ function showMultiplayerResults(winnerName, time, target) {
     document.getElementById('winnerTime').textContent = time;
     document.getElementById('multiplayerResults').classList.remove('hidden');
 
+    // Update leaderboard
+    if (leaderboard && leaderboard.length > 0) {
+        updateLeaderboard(leaderboard);
+    }
+
     // Setup ready system
     setupMultiplayerResults();
 
     console.log('✓ Multiplayer results displayed');
+}
+
+// Update leaderboard display
+function updateLeaderboard(leaderboard) {
+    const list = document.getElementById('leaderboardList');
+    if (!list) return;
+    
+    list.innerHTML = leaderboard.map((player, index) => `
+        <div class="leaderboard-item ${index === 0 ? 'first' : ''}">
+            <div class="leaderboard-rank">${index + 1}</div>
+            <div class="leaderboard-avatar" style="background: ${player.color || '#666'}">
+                ${player.name.charAt(0).toUpperCase()}
+            </div>
+            <div class="leaderboard-info">
+                <div class="leaderboard-name">${player.name}</div>
+                <div class="leaderboard-wins">${player.wins} ${player.wins === 1 ? 'победа' : 'побед'}</div>
+            </div>
+            <div class="leaderboard-score">${player.score}</div>
+        </div>
+    `).join('');
 }
 
 // Add player result

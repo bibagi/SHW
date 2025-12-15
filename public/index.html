@@ -521,7 +521,9 @@
             <div class="game-header-center">
                 <div class="target-badge">
                     <span class="target-label">ЦЕЛЬ</span>
-                    <span class="target-name" id="targetTitle">Загрузка...</span>
+                    <div class="target-name-wrapper">
+                        <span class="target-name" id="targetTitle">Загрузка...</span>
+                    </div>
                 </div>
             </div>
             <div class="game-header-right">
@@ -596,7 +598,15 @@
             </div>
 
             <div id="multiplayerResults" class="multiplayer-section hidden">
-                <div id="resultsTable" class="players-results"></div>
+                <!-- Таблица лидеров -->
+                <div class="leaderboard-section" id="leaderboardSection">
+                    <div class="leaderboard-header">
+                        <span class="leaderboard-icon">🏆</span>
+                        <span class="leaderboard-title">Таблица лидеров</span>
+                    </div>
+                    <div class="leaderboard-list" id="leaderboardList"></div>
+                </div>
+                
                 <div id="readySystem" class="ready-section">
                     <h4>Готовность к следующей игре</h4>
                     <div id="readyPlayersList"></div>
