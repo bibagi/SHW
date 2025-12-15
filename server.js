@@ -175,12 +175,13 @@ function joinRoom(ws, message) {
     ws.send(joinMsg);
     
     // Send current room settings to new player
-    if (room.death404Mode || room.modifiers || room.timeLimitSeconds) {
+    if (room.death404Mode || room.modifiers || room.timeLimitSeconds || room.maxPlayers) {
         ws.send(JSON.stringify({
             type: 'room_settings',
             death404Mode: room.death404Mode || false,
             modifiers: room.modifiers || {},
-            timeLimitSeconds: room.timeLimitSeconds || 120
+            timeLimitSeconds: room.timeLimitSeconds || 120,
+            maxPlayers: room.maxPlayers || 8
         }));
     }
     
@@ -355,6 +356,9 @@ function updateRoomSettings(ws, message) {
     if (message.timeLimitSeconds !== undefined) {
         room.timeLimitSeconds = message.timeLimitSeconds;
     }
+    if (message.maxPlayers !== undefined) {
+        room.maxPlayers = message.maxPlayers;
+    }
 
     // Broadcast to all other players
     room.players.forEach(p => {
@@ -363,7 +367,8 @@ function updateRoomSettings(ws, message) {
                 type: 'room_settings',
                 death404Mode: room.death404Mode,
                 modifiers: room.modifiers,
-                timeLimitSeconds: room.timeLimitSeconds
+                timeLimitSeconds: room.timeLimitSeconds,
+                maxPlayers: room.maxPlayers
             }));
         }
     });

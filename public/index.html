@@ -131,17 +131,32 @@
                             <div class="players-list" id="playersListPanel"></div>
                         </div>
 
-                        <!-- Селектор макс игроков (popup) -->
+                        <!-- Селектор макс игроков (колёсико) -->
                         <div class="max-players-popup" id="maxPlayersPopup">
                             <div class="max-players-title">Максимум игроков</div>
-                            <div class="players-wheel" id="playersWheel">
-                                <div class="wheel-option" data-value="2">2</div>
-                                <div class="wheel-option" data-value="4">4</div>
-                                <div class="wheel-option" data-value="6">6</div>
-                                <div class="wheel-option selected" data-value="8">8</div>
-                                <div class="wheel-option" data-value="10">10</div>
-                                <div class="wheel-option" data-value="12">12</div>
-                                <div class="wheel-option" data-value="16">16</div>
+                            <div class="number-wheel-container">
+                                <button class="wheel-arrow wheel-up" id="wheelUp">▲</button>
+                                <div class="number-wheel" id="numberWheel">
+                                    <div class="wheel-numbers" id="wheelNumbers">
+                                        <div class="wheel-num" data-value="2">2</div>
+                                        <div class="wheel-num" data-value="3">3</div>
+                                        <div class="wheel-num" data-value="4">4</div>
+                                        <div class="wheel-num" data-value="5">5</div>
+                                        <div class="wheel-num" data-value="6">6</div>
+                                        <div class="wheel-num" data-value="7">7</div>
+                                        <div class="wheel-num active" data-value="8">8</div>
+                                        <div class="wheel-num" data-value="9">9</div>
+                                        <div class="wheel-num" data-value="10">10</div>
+                                        <div class="wheel-num" data-value="11">11</div>
+                                        <div class="wheel-num" data-value="12">12</div>
+                                        <div class="wheel-num" data-value="13">13</div>
+                                        <div class="wheel-num" data-value="14">14</div>
+                                        <div class="wheel-num" data-value="15">15</div>
+                                        <div class="wheel-num" data-value="16">16</div>
+                                    </div>
+                                    <div class="wheel-highlight"></div>
+                                </div>
+                                <button class="wheel-arrow wheel-down" id="wheelDown">▼</button>
                             </div>
                             <button class="max-players-confirm" id="maxPlayersConfirm">Применить</button>
                         </div>
@@ -533,6 +548,8 @@
             </div>
         </div>
     </div>
+
+
 
     <!-- Результаты -->
     <div id="results" class="screen">

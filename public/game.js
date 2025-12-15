@@ -63,7 +63,7 @@ function copyUserTag() {
     const nick = gameState.playerName || 'Игрок';
     const id = gameState.playerId;
     const fullTag = `${nick}#${id}`;
-    
+
     navigator.clipboard.writeText(fullTag).then(() => {
         // Show notification
         const btn = document.getElementById('copyNickBtn');
@@ -84,10 +84,10 @@ function updateUserDisplay() {
     const fullTag = document.getElementById('fullTag');
     const avatar = document.getElementById('userAvatar');
     const avatarPreview = document.getElementById('avatarPreviewLarge');
-    
+
     const nick = gameState.playerName || 'Игрок';
     const id = gameState.playerId;
-    
+
     if (nickDisplay) nickDisplay.textContent = nick;
     if (nickTag) nickTag.textContent = `#${id}`;
     if (fullTag) fullTag.textContent = `${nick}#${id}`;
@@ -108,21 +108,21 @@ function updateOnlineCount(count) {
 function connectWebSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     gameState.ws = new WebSocket(`${protocol}//${window.location.host}`);
-    
+
     gameState.ws.onopen = () => {
         console.log('✓ WebSocket connected');
     };
-    
+
     gameState.ws.onmessage = (event) => {
         console.log('📩 Raw message:', event.data);
         const message = JSON.parse(event.data);
         handleServerMessage(message);
     };
-    
+
     gameState.ws.onerror = (error) => {
         console.error('WebSocket error:', error);
     };
-    
+
     gameState.ws.onclose = () => {
         console.log('WebSocket disconnected');
     };
@@ -211,7 +211,7 @@ function updatePlayersList(players) {
     gameState.players = players;
     const list = document.getElementById('playersList');
     if (list) {
-        list.innerHTML = '<h3>👥 Игроки:</h3>' + 
+        list.innerHTML = '<h3>👥 Игроки:</h3>' +
             players.map(p => `<div class="player-item">${p.name}</div>`).join('');
     }
     // Also update panel
@@ -223,7 +223,7 @@ function slideToRoom() {
     const slideMenu = document.getElementById('slideMenu');
     const slideRoom = document.getElementById('slideRoom');
     const slideJoin = document.getElementById('slideJoin');
-    
+
     // Hide menu
     if (slideMenu) {
         slideMenu.classList.add('slide-left');
@@ -242,7 +242,7 @@ function slideToRoom() {
 function slideToJoin() {
     const slideMenu = document.getElementById('slideMenu');
     const slideJoin = document.getElementById('slideJoin');
-    
+
     if (slideMenu) slideMenu.classList.add('slide-left');
     if (slideMenu) slideMenu.classList.remove('active');
     if (slideJoin) slideJoin.classList.add('active');
@@ -253,7 +253,7 @@ function slideToMenu() {
     const slideMenu = document.getElementById('slideMenu');
     const slideRoom = document.getElementById('slideRoom');
     const slideJoin = document.getElementById('slideJoin');
-    
+
     if (slideMenu) {
         slideMenu.classList.remove('slide-left');
         slideMenu.classList.add('active');
@@ -267,11 +267,16 @@ function slideToMenu() {
 
 // Max players selector
 let maxPlayers = 8;
+let wheelIndex = 6; // Default index for 8 players
+const wheelValues = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
 
 function showMaxPlayersPopup() {
     if (!gameState.isHost) return;
     const popup = document.getElementById('maxPlayersPopup');
-    if (popup) popup.classList.add('show');
+    if (popup) {
+        popup.classList.add('show');
+        updateWheelPosition();
+    }
 }
 
 function hideMaxPlayersPopup() {
@@ -279,23 +284,65 @@ function hideMaxPlayersPopup() {
     if (popup) popup.classList.remove('show');
 }
 
-function selectMaxPlayers(value) {
-    maxPlayers = value;
-    // Update UI
-    document.querySelectorAll('.wheel-option').forEach(opt => {
-        opt.classList.toggle('selected', parseInt(opt.dataset.value) === value);
+function updateWheelPosition() {
+    const wheelNumbers = document.getElementById('wheelNumbers');
+    if (!wheelNumbers) return;
+
+    // Calculate offset to center the active item
+    const itemHeight = 46;
+    const containerHeight = 140;
+    const centerOffset = (containerHeight - itemHeight) / 2;
+    const offset = -(wheelIndex * itemHeight) + centerOffset;
+
+    wheelNumbers.style.transform = `translateY(${offset}px)`;
+
+    // Update active states
+    document.querySelectorAll('.wheel-num').forEach((num, i) => {
+        num.classList.remove('active', 'near');
+        if (i === wheelIndex) {
+            num.classList.add('active');
+        } else if (Math.abs(i - wheelIndex) === 1) {
+            num.classList.add('near');
+        }
     });
+
+    maxPlayers = wheelValues[wheelIndex];
+}
+
+function wheelUp() {
+    if (wheelIndex > 0) {
+        wheelIndex--;
+        updateWheelPosition();
+    }
+}
+
+function wheelDown() {
+    if (wheelIndex < wheelValues.length - 1) {
+        wheelIndex++;
+        updateWheelPosition();
+    }
+}
+
+function selectMaxPlayers(value) {
+    const index = wheelValues.indexOf(value);
+    if (index !== -1) {
+        wheelIndex = index;
+        updateWheelPosition();
+    }
 }
 
 function confirmMaxPlayers() {
     const display = document.getElementById('maxPlayersDisplay');
     if (display) display.textContent = maxPlayers;
     hideMaxPlayersPopup();
-    
+
     // Notify server if in room
     if (gameState.ws && gameState.roomCode && gameState.isHost) {
         gameState.ws.send(JSON.stringify({
             type: 'room_settings',
+            death404Mode: gameState.death404Mode,
+            modifiers: gameState.modifiers,
+            timeLimitSeconds: gameState.timeLimitSeconds,
             maxPlayers: maxPlayers
         }));
     }
@@ -304,19 +351,19 @@ function confirmMaxPlayers() {
 // Show room panel on the right
 function showRoomPanel(code, players, isHost) {
     console.log('showRoomPanel called:', code, players, isHost);
-    
+
     // Slide to room
     slideToRoom();
-    
+
     const codeEl = document.getElementById('roomCodeDisplay');
     codeEl.textContent = code;
     codeEl.dataset.code = code; // Store for copy function
-    
+
     // Show settings and start button only for host
     const btnReady = document.getElementById('btnReadyLobby');
     const death404Btn = document.getElementById('death404Toggle');
     const modifiersTrigger = document.getElementById('modifiersTrigger');
-    
+
     if (isHost) {
         document.getElementById('btnStartGamePanel').classList.remove('hidden');
         if (btnReady) btnReady.classList.add('hidden');
@@ -356,7 +403,7 @@ function showRoomPanel(code, players, isHost) {
             modifiersTrigger.style.opacity = '0.7';
         }
     }
-    
+
     updatePlayersListPanel(players);
 }
 
@@ -364,13 +411,13 @@ function showRoomPanel(code, players, isHost) {
 function hideRoomPanel() {
     // Slide back to menu
     slideToMenu();
-    
+
     // Hide modifiers panel
     hideModifiersPanel();
-    
+
     // Reset death mode
     toggleDeath404Mode(false);
-    
+
     gameState.roomCode = null;
     gameState.isHost = false;
 }
@@ -414,26 +461,26 @@ function updateModifiersModalState() {
         const modName = row.dataset.modifier;
         const btn = row.querySelector('.toggle-btn');
         const isActive = gameState.modifiers[modName];
-        
+
         row.classList.toggle('active', isActive);
         if (btn) {
             btn.classList.toggle('active', isActive);
             btn.textContent = isActive ? 'ON' : 'OFF';
         }
     });
-    
+
     // Update count
     const count = Object.values(gameState.modifiers).filter(v => v).length;
     const countEl = document.getElementById('activeModifiersCount');
     if (countEl) countEl.textContent = count;
-    
+
     // Update trigger count
     const triggerCount = document.getElementById('modifiersCount');
     if (triggerCount) {
         triggerCount.textContent = count;
         triggerCount.style.display = count > 0 ? 'inline' : 'none';
     }
-    
+
     // Show/hide time limit input
     const timeLimitModal = document.getElementById('timeLimitModal');
     if (timeLimitModal) {
@@ -473,7 +520,7 @@ const modifierDescriptions = {
 function showModifierDetails(modName) {
     const details = document.getElementById('modifierDetails');
     const info = modifierDescriptions[modName];
-    
+
     if (details && info) {
         details.innerHTML = `
             <div class="modifier-detail-content">
@@ -488,7 +535,7 @@ function showModifierDetails(modName) {
 function toggleModifierFromModal(modName) {
     const newState = !gameState.modifiers[modName];
     gameState.modifiers[modName] = newState;
-    
+
     // Special handling for time limit
     if (modName === 'timeLimit') {
         const timeLimitInput = document.getElementById('timeLimitValueModal');
@@ -496,10 +543,10 @@ function toggleModifierFromModal(modName) {
             gameState.timeLimitSeconds = parseInt(timeLimitInput.value) || 120;
         }
     }
-    
+
     updateModifiersModalState();
     updateActiveModifiersTags();
-    
+
     // Notify other players
     if (gameState.ws && gameState.roomCode && gameState.isHost) {
         gameState.ws.send(JSON.stringify({
@@ -520,7 +567,7 @@ function handleGlobalKeyboard(e) {
     const lobbyScreen = document.getElementById('lobby');
     const gameScreen = document.getElementById('game');
     const resultsScreen = document.getElementById('results');
-    
+
     // Don't handle if typing in input
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
         // Allow ESC to blur input
@@ -529,11 +576,11 @@ function handleGlobalKeyboard(e) {
         }
         return;
     }
-    
+
     // ESC - close modals/popups or exit game
     if (e.key === 'Escape') {
         e.preventDefault();
-        
+
         // Close modals in order of priority
         if (modifiersModal?.classList.contains('show')) {
             hideModifiersPanel();
@@ -551,11 +598,11 @@ function handleGlobalKeyboard(e) {
         }
         return;
     }
-    
+
     // Enter - confirm actions
     if (e.key === 'Enter') {
         e.preventDefault();
-        
+
         if (modifiersModal?.classList.contains('show')) {
             hideModifiersPanel();
         } else if (howToPlayModal?.classList.contains('show')) {
@@ -566,7 +613,7 @@ function handleGlobalKeyboard(e) {
             // In lobby - start single player or ready
             const slideMenu = document.getElementById('slideMenu');
             const slideRoom = document.getElementById('slideRoom');
-            
+
             if (slideMenu?.classList.contains('active')) {
                 // Main menu - start single player
                 startSinglePlayer();
@@ -598,7 +645,7 @@ function handleGlobalKeyboard(e) {
         }
         return;
     }
-    
+
     // Space - same as Enter in some contexts
     if (e.key === ' ' || e.code === 'Space') {
         if (resultsScreen?.classList.contains('active')) {
@@ -609,7 +656,7 @@ function handleGlobalKeyboard(e) {
         }
         return;
     }
-    
+
     // H - show how to play (in lobby)
     if ((e.key === 'h' || e.key === 'H' || e.key === 'р' || e.key === 'Р') && lobbyScreen?.classList.contains('active')) {
         if (!modifiersModal?.classList.contains('show') && !howToPlayModal?.classList.contains('show')) {
@@ -618,7 +665,7 @@ function handleGlobalKeyboard(e) {
         }
         return;
     }
-    
+
     // M - show modifiers (in lobby)
     if ((e.key === 'm' || e.key === 'M' || e.key === 'ь' || e.key === 'Ь') && lobbyScreen?.classList.contains('active')) {
         if (!modifiersModal?.classList.contains('show') && !howToPlayModal?.classList.contains('show')) {
@@ -627,7 +674,7 @@ function handleGlobalKeyboard(e) {
         }
         return;
     }
-    
+
     // 1-4 - quick tab switch in help modal
     if (howToPlayModal?.classList.contains('show')) {
         const tabs = ['basics', 'multiplayer', 'mode404', 'tips'];
@@ -639,7 +686,7 @@ function handleGlobalKeyboard(e) {
         }
         return;
     }
-    
+
     // Arrow keys - navigate tabs in modals
     if (howToPlayModal?.classList.contains('show')) {
         const activeTab = document.querySelector('.help-tab.active');
@@ -667,19 +714,19 @@ function updatePlayersListPanel(players) {
     gameState.players = players;
     const list = document.getElementById('playersListPanel');
     const playersCount = document.getElementById('playersCount');
-    
+
     // Update players count
     const playersCountEl = document.getElementById('playersCount');
     if (playersCountEl) {
         playersCountEl.textContent = players.length;
     }
-    
+
     if (list) {
         list.innerHTML = players.map((p, index) => {
             const isHost = index === 0;
             const color = p.color || '#666';
             const isReady = p.ready || false;
-            
+
             // Status icon
             let statusClass = '';
             let statusIcon = '○';
@@ -690,7 +737,7 @@ function updatePlayersListPanel(players) {
                 statusClass = 'ready';
                 statusIcon = '✓';
             }
-            
+
             return `
                 <div class="player-item ${isHost ? 'is-host' : ''}">
                     <div class="player-item-avatar" style="background: ${color};">
@@ -706,10 +753,10 @@ function updatePlayersListPanel(players) {
             `;
         }).join('');
     }
-    
+
     // Update ready progress bar
     updateReadyProgress(players);
-    
+
     // Update start button state for host
     updateStartButtonState(players);
 }
@@ -718,20 +765,20 @@ function updatePlayersListPanel(players) {
 function updateReadyProgress(players) {
     const progressFill = document.getElementById('readyProgressFill');
     const readyText = document.getElementById('readyText');
-    
+
     if (!progressFill || !readyText) return;
-    
+
     const nonHostPlayers = players.slice(1);
     const readyCount = nonHostPlayers.filter(p => p.ready).length;
     const totalNonHost = nonHostPlayers.length;
-    
+
     if (totalNonHost === 0) {
         progressFill.style.width = '100%';
         readyText.textContent = 'Ожидание других игроков...';
     } else {
         const percent = (readyCount / totalNonHost) * 100;
         progressFill.style.width = `${percent}%`;
-        
+
         if (readyCount === totalNonHost) {
             readyText.textContent = 'Все готовы! Можно начинать';
         } else {
@@ -745,7 +792,7 @@ function updateStartButtonState(players) {
     const btnStart = document.getElementById('btnStartGamePanel');
     const btnReady = document.getElementById('btnReadyLobby');
     const roomSettings = document.getElementById('roomSettings');
-    
+
     if (!gameState.isHost) {
         // Non-host sees ready button, hides settings
         if (btnReady) btnReady.classList.remove('hidden');
@@ -753,16 +800,16 @@ function updateStartButtonState(players) {
         if (roomSettings) roomSettings.style.display = 'none';
         return;
     }
-    
+
     // Host logic - show settings
     if (btnReady) btnReady.classList.add('hidden');
     if (btnStart) btnStart.classList.remove('hidden');
     if (roomSettings) roomSettings.style.display = 'block';
-    
+
     // Check if all non-host players are ready
     const nonHostPlayers = players.slice(1);
     const allReady = nonHostPlayers.length === 0 || nonHostPlayers.every(p => p.ready);
-    
+
     if (btnStart) {
         btnStart.disabled = !allReady;
         if (allReady && nonHostPlayers.length > 0) {
@@ -783,7 +830,7 @@ function sendReadyLobby() {
             type: 'lobby_ready',
             playerName: gameState.playerName
         }));
-        
+
         // Update button
         const btnReady = document.getElementById('btnReadyLobby');
         if (btnReady) {
@@ -799,10 +846,10 @@ function copyRoomCodePanel() {
     const el = document.getElementById('roomCodeDisplay');
     // Use stored room code, not current text (which might be "Скопировано!")
     const code = gameState.roomCode || el.dataset.code || el.textContent;
-    
+
     // Don't copy if it's already showing "Скопировано!"
     if (code === 'Скопировано!' || !code || code === '------') return;
-    
+
     navigator.clipboard.writeText(code).then(() => {
         // Store original code in dataset
         if (!el.dataset.code) {
@@ -832,7 +879,7 @@ function updatePlayerProgress(playerName, article, clicks) {
 function showScreen(screenId) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById(screenId).classList.add('active');
-    
+
     // Hide footer on game screen
     const footer = document.getElementById('siteFooter');
     if (footer) {
@@ -844,7 +891,7 @@ function showScreen(screenId) {
 function loadNickname() {
     const saved = localStorage.getItem('wikiRaceNickname');
     gameState.playerId = generatePlayerId();
-    
+
     if (saved) {
         gameState.playerName = saved;
         const playerNameInput = document.getElementById('playerName');
@@ -854,7 +901,7 @@ function loadNickname() {
     } else {
         gameState.playerName = 'Игрок';
     }
-    
+
     updateUserDisplay();
 }
 
@@ -862,11 +909,11 @@ function loadNickname() {
 function saveNickname(name) {
     gameState.playerName = name;
     localStorage.setItem('wikiRaceNickname', name);
-    
+
     // Update hidden input for compatibility
     const playerNameInput = document.getElementById('playerName');
     if (playerNameInput) playerNameInput.value = name;
-    
+
     updateUserDisplay();
 }
 
@@ -885,20 +932,20 @@ function saveLeaderboard(leaderboard) {
 function addToLeaderboard(playerName, time) {
     const leaderboard = getLeaderboard();
     const timeInSeconds = timeToSeconds(time);
-    
+
     leaderboard.push({
         name: playerName,
         time: time,
         seconds: timeInSeconds,
         date: new Date().toLocaleString('ru-RU')
     });
-    
+
     // Sort by time (ascending)
     leaderboard.sort((a, b) => a.seconds - b.seconds);
-    
+
     // Keep only top 10
     leaderboard.splice(10);
-    
+
     saveLeaderboard(leaderboard);
 }
 
@@ -912,12 +959,12 @@ function timeToSeconds(timeStr) {
 function displayLeaderboard() {
     const leaderboard = getLeaderboard();
     const table = document.getElementById('leaderboardTable');
-    
+
     if (leaderboard.length === 0) {
         table.innerHTML = '<p style="text-align: center; color: #888;">Нет результатов</p>';
         return;
     }
-    
+
     table.innerHTML = leaderboard.map((entry, index) => `
         <div class="leaderboard-row">
             <span class="rank">#${index + 1}</span>
@@ -932,14 +979,14 @@ async function getRandomArticle() {
     try {
         const url = 'https://ru.wikipedia.org/w/api.php?action=query&format=json&list=random&rnnamespace=0&rnlimit=1&origin=*';
         console.log('Fetching random article...');
-        
+
         const response = await fetch(url);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const data = await response.json();
-        
+
         if (data.query && data.query.random && data.query.random[0]) {
             const title = data.query.random[0].title;
             console.log('✓ Random article:', title);
@@ -948,7 +995,7 @@ async function getRandomArticle() {
     } catch (e) {
         console.error('Error fetching random article:', e);
     }
-    
+
     // Fallback articles
     const fallbacks = ['Россия', 'Москва', 'Википедия', 'Интернет', 'Компьютер'];
     const fallback = fallbacks[Math.floor(Math.random() * fallbacks.length)];
@@ -982,14 +1029,14 @@ async function startSinglePlayer() {
         alert('Введите имя!');
         return;
     }
-    
+
     // Save nickname
     saveNickname(gameState.playerName);
-    
+
     // Show loading
     showScreen('countdown');
     document.getElementById('countdownNumber').textContent = 'Загрузка...';
-    
+
     // Get target article (custom or random)
     try {
         gameState.targetArticle = await getTargetArticle();
@@ -998,7 +1045,7 @@ async function startSinglePlayer() {
         console.error('✗ Error loading article:', e);
         gameState.targetArticle = 'Альберт Эйнштейн';
     }
-    
+
     // Start countdown
     startCountdown();
 }
@@ -1010,12 +1057,12 @@ function createRoom() {
         alert('Введите имя!');
         return;
     }
-    
+
     // Save nickname
     saveNickname(gameState.playerName);
-    
+
     const customization = getUserCustomization();
-    
+
     if (!gameState.ws || gameState.ws.readyState !== WebSocket.OPEN) {
         connectWebSocket();
         setTimeout(() => {
@@ -1048,7 +1095,7 @@ function toggleJoinForm() {
 function joinRoomConfirm() {
     gameState.playerName = document.getElementById('playerName').value || 'Игрок';
     const code = document.getElementById('roomCodeInput').value.toUpperCase();
-    
+
     if (!gameState.playerName) {
         alert('Введите имя!');
         return;
@@ -1057,18 +1104,18 @@ function joinRoomConfirm() {
         alert('Введите корректный код комнаты!');
         return;
     }
-    
+
     // Check if already in this room
     if (gameState.roomCode === code) {
         alert('Вы уже в этой комнате!');
         return;
     }
-    
+
     // Save nickname
     saveNickname(gameState.playerName);
-    
+
     const customization = getUserCustomization();
-    
+
     if (!gameState.ws || gameState.ws.readyState !== WebSocket.OPEN) {
         connectWebSocket();
         setTimeout(() => {
@@ -1091,17 +1138,17 @@ function joinRoomConfirm() {
             avatarUrl: customization.avatarUrl
         }));
     }
-    
+
     // Slide will happen when room_joined message is received
 }
 
 // Start game (host only)
 async function startGameHost() {
     if (!gameState.isHost) return;
-    
+
     const startArticle = 'Главная страница Wikipedia';
     const targetArticle = await getRandomArticle();
-    
+
     gameState.ws.send(JSON.stringify({
         type: 'start_game',
         startArticle,
@@ -1113,12 +1160,12 @@ async function startGameHost() {
 function startCountdown() {
     showScreen('countdown');
     document.getElementById('countdownTarget').textContent = gameState.targetArticle;
-    
+
     // 5 seconds in death mode, 3 seconds normally
     let count = gameState.death404Mode ? 5 : 3;
     const countdownEl = document.getElementById('countdownNumber');
     countdownEl.textContent = count;
-    
+
     const interval = setInterval(() => {
         count--;
         if (count > 0) {
@@ -1135,18 +1182,18 @@ async function startGame() {
     gameState.gameActive = true;
     gameState.startTime = Date.now();
     gameState.currentArticle = 'Главная страница Wikipedia';
-    
+
     // Clear any existing teleport interval
     if (gameState.teleportInterval) {
         clearInterval(gameState.teleportInterval);
         gameState.teleportInterval = null;
     }
-    
+
     console.log('🎮 Game started! Target:', gameState.targetArticle);
     console.log('Modifiers:', gameState.modifiers);
-    
+
     showScreen('game');
-    
+
     // Hidden target modifier - show only emoji hint
     if (gameState.modifiers.hiddenTarget) {
         document.getElementById('targetTitle').textContent = '🎯 ❓❓❓';
@@ -1161,34 +1208,34 @@ async function startGame() {
         const description = await getArticleDescription(gameState.targetArticle);
         document.getElementById('targetDescription').textContent = description;
     }
-    
+
     // Blind kitten modifier - add CSS class to hide text
     if (gameState.modifiers.blindKitten) {
         document.body.classList.add('blind-kitten-mode');
     } else {
         document.body.classList.remove('blind-kitten-mode');
     }
-    
+
     // Drunk modifier - add CSS class for drunk effect
     if (gameState.modifiers.drunk) {
         document.body.classList.add('drunk-mode');
     } else {
         document.body.classList.remove('drunk-mode');
     }
-    
+
     // Apply modifiers
     let startPage = 'Заглавная_страница';
-    
+
     // Random start modifier
     if (gameState.modifiers.randomStart) {
         console.log('🎲 Random start modifier active');
         startPage = await getRandomArticle();
         gameState.currentArticle = startPage;
     }
-    
+
     // Load Wikipedia
     loadWikipediaArticle(startPage);
-    
+
     // Teleport modifier - random page every 15 seconds
     if (gameState.modifiers.teleport) {
         console.log('🌀 Teleport modifier active');
@@ -1203,16 +1250,16 @@ async function startGame() {
             showTeleportNotification();
         }, 15000);
     }
-    
+
     // Time limit modifier
     if (gameState.modifiers.timeLimit) {
         console.log('⏱️ Time limit modifier active:', gameState.timeLimitSeconds, 'seconds');
         startTimeLimitCountdown();
     }
-    
+
     // Start tracking navigation
     trackIframeNavigation();
-    
+
     // Start timer
     startTimer();
 }
@@ -1237,17 +1284,17 @@ function startTimeLimitCountdown() {
     if (gameState.timeLimitInterval) {
         clearInterval(gameState.timeLimitInterval);
     }
-    
+
     // This interval only checks for game over, display is handled by startTimer
     gameState.timeLimitInterval = setInterval(() => {
         if (!gameState.gameActive) {
             clearInterval(gameState.timeLimitInterval);
             return;
         }
-        
+
         const elapsed = Math.floor((Date.now() - gameState.startTime) / 1000);
         const remainingTime = gameState.timeLimitSeconds - elapsed;
-        
+
         // Time's up!
         if (remainingTime <= 0) {
             clearInterval(gameState.timeLimitInterval);
@@ -1259,9 +1306,9 @@ function startTimeLimitCountdown() {
 // Game over (for death mode failures)
 function gameOver(reason) {
     if (!gameState.gameActive) return;
-    
+
     gameState.gameActive = false;
-    
+
     // Clear intervals
     if (gameState.teleportInterval) {
         clearInterval(gameState.teleportInterval);
@@ -1269,7 +1316,7 @@ function gameOver(reason) {
     if (gameState.timeLimitInterval) {
         clearInterval(gameState.timeLimitInterval);
     }
-    
+
     // Show game over overlay
     let overlay = document.getElementById('gameOverOverlay');
     if (!overlay) {
@@ -1283,10 +1330,10 @@ function gameOver(reason) {
         `;
         document.body.appendChild(overlay);
     }
-    
+
     document.getElementById('gameOverReason').textContent = reason;
     overlay.classList.add('show');
-    
+
     console.log('💀 Game Over:', reason);
 }
 
@@ -1308,14 +1355,14 @@ function loadWikipediaArticle(articleTitle) {
 // Track iframe navigation - автоматическое определение победы
 function trackIframeNavigation() {
     const iframe = document.getElementById('wikiFrame');
-    
+
     // Метод 1: Проверяем через интервал
     const checkInterval = setInterval(() => {
         if (!gameState.gameActive) {
             clearInterval(checkInterval);
             return;
         }
-        
+
         try {
             // Пробуем получить URL из iframe
             const currentUrl = iframe.contentWindow.location.href;
@@ -1329,11 +1376,11 @@ function trackIframeNavigation() {
             // CORS блокирует - это нормально
         }
     }, 1000);
-    
+
     // Метод 2: Слушаем событие load iframe
-    iframe.onload = function() {
+    iframe.onload = function () {
         if (!gameState.gameActive) return;
-        
+
         // Небольшая задержка чтобы страница загрузилась
         setTimeout(() => {
             try {
@@ -1361,7 +1408,7 @@ function trackIframeNavigation() {
             }
         }, 500);
     };
-    
+
     console.log('✓ Auto-detection enabled. Game will finish automatically when target is reached.');
 }
 
@@ -1373,26 +1420,26 @@ function normalizeArticleName(name) {
 // Check if target reached by description text match
 function checkTargetByDescription() {
     if (!gameState.gameActive) return;
-    
+
     const iframe = document.getElementById('wikiFrame');
     const descriptionEl = document.getElementById('targetDescription');
-    
+
     if (!descriptionEl || !iframe) return;
-    
+
     const targetDescription = descriptionEl.textContent.trim();
     if (!targetDescription || targetDescription.length < 50) return; // Too short to be reliable
-    
+
     try {
         const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
         if (!iframeDoc) return;
-        
+
         // Get first paragraph of the article
         const firstParagraph = iframeDoc.querySelector('#mw-content-text .mw-parser-output > p:not(.mw-empty-elt)');
         if (!firstParagraph) return;
-        
+
         const pageText = firstParagraph.textContent.trim();
         if (!pageText) return;
-        
+
         // Normalize both texts for comparison
         const normalizeText = (text) => {
             return text
@@ -1402,27 +1449,27 @@ function checkTargetByDescription() {
                 .replace(/\s+/g, ' ')
                 .trim();
         };
-        
+
         const normalizedDescription = normalizeText(targetDescription);
         const normalizedPageText = normalizeText(pageText);
-        
+
         // Check if description is contained in page text (at least 80% match)
         // Split into words and check overlap
         const descWords = normalizedDescription.split(' ').filter(w => w.length > 3);
         const pageWords = normalizedPageText.split(' ');
-        
+
         if (descWords.length < 5) return; // Not enough words to compare
-        
+
         let matchCount = 0;
         for (const word of descWords) {
             if (pageWords.includes(word)) {
                 matchCount++;
             }
         }
-        
+
         const matchRatio = matchCount / descWords.length;
         console.log(`📝 Description match: ${(matchRatio * 100).toFixed(1)}% (${matchCount}/${descWords.length} words)`);
-        
+
         // If 80% or more words match, consider it a win
         if (matchRatio >= 0.8) {
             console.log('🎉 TARGET REACHED BY DESCRIPTION MATCH! 🎉');
@@ -1444,31 +1491,31 @@ function disqualify(reason) {
 // Timer
 function startTimer() {
     const timerEl = document.getElementById('timer');
-    
+
     // If time limit modifier is active, show countdown instead
     if (gameState.modifiers.timeLimit) {
         let remainingTime = gameState.timeLimitSeconds;
-        
+
         const interval = setInterval(() => {
             if (!gameState.gameActive) {
                 clearInterval(interval);
                 return;
             }
-            
+
             const elapsed = Math.floor((Date.now() - gameState.startTime) / 1000);
             remainingTime = gameState.timeLimitSeconds - elapsed;
-            
+
             if (remainingTime <= 0) {
                 remainingTime = 0;
                 timerEl.textContent = '00:00';
                 clearInterval(interval);
                 return;
             }
-            
+
             const minutes = Math.floor(remainingTime / 60);
             const seconds = remainingTime % 60;
             timerEl.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-            
+
             // Warning when 30 seconds left
             if (remainingTime <= 30) {
                 timerEl.classList.add('time-warning');
@@ -1481,7 +1528,7 @@ function startTimer() {
                 clearInterval(interval);
                 return;
             }
-            
+
             const elapsed = Math.floor((Date.now() - gameState.startTime) / 1000);
             const minutes = Math.floor(elapsed / 60);
             const seconds = elapsed % 60;
@@ -1493,26 +1540,26 @@ function startTimer() {
 // Check if target reached
 function checkTargetReached(articleTitle) {
     if (!gameState.gameActive) return;
-    
+
     const normalizedTarget = gameState.targetArticle
         .toLowerCase()
         .replace(/[\s_\-()]/g, '')
         .trim();
-    
+
     const normalizedCurrent = articleTitle
         .toLowerCase()
         .replace(/[\s_\-()]/g, '')
         .trim();
-    
+
     console.log('Comparing:', normalizedCurrent, 'vs', normalizedTarget);
-    
+
     // Check by article name
     if (normalizedCurrent === normalizedTarget) {
         console.log('🎉 TARGET REACHED BY NAME! 🎉');
         finishGame();
         return;
     }
-    
+
     // Additional check: verify by description text on page
     checkTargetByDescription();
 }
@@ -1520,13 +1567,13 @@ function checkTargetReached(articleTitle) {
 // Finish game
 function finishGame() {
     if (!gameState.gameActive) return; // Prevent multiple calls
-    
+
     gameState.gameActive = false;
     const elapsed = Math.floor((Date.now() - gameState.startTime) / 1000);
     const minutes = Math.floor(elapsed / 60);
     const seconds = elapsed % 60;
     const timeStr = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-    
+
     if (gameState.ws && gameState.roomCode) {
         gameState.ws.send(JSON.stringify({
             type: 'player_finished',
@@ -1536,7 +1583,7 @@ function finishGame() {
             targetArticle: gameState.targetArticle
         }));
     }
-    
+
     showResults(0, timeStr, gameState.targetArticle);
 }
 
@@ -1544,17 +1591,17 @@ function finishGame() {
 function showResults(clicks, time, target) {
     showScreen('results');
     document.getElementById('resultTarget').textContent = target;
-    
+
     // Load target page in iframe
     const resultFrame = document.getElementById('resultPageFrame');
     resultFrame.src = `https://ru.wikipedia.org/wiki/${encodeURIComponent(target)}`;
     document.getElementById('targetPageContainer').classList.remove('hidden');
-    
+
     // Add to leaderboard (only for single player)
     if (!gameState.roomCode) {
         addToLeaderboard(gameState.playerName, time);
     }
-    
+
     // Show winner info if in multiplayer
     if (gameState.roomCode) {
         document.getElementById('winnerInfo').classList.remove('hidden');
@@ -1565,7 +1612,7 @@ function showResults(clicks, time, target) {
         document.getElementById('winnerInfo').classList.add('hidden');
         document.getElementById('multiplayerResults').classList.add('hidden');
     }
-    
+
     // Setup buttons correctly
     setupMultiplayerResults();
 }
@@ -1573,26 +1620,26 @@ function showResults(clicks, time, target) {
 // Show multiplayer results (for all players when someone wins)
 function showMultiplayerResults(winnerName, time, target) {
     console.log('showMultiplayerResults called with:', { winnerName, time, target });
-    
+
     showScreen('results');
     console.log('Screen changed to results');
-    
+
     document.getElementById('resultTarget').textContent = target;
-    
+
     // Load target page in iframe
     const resultFrame = document.getElementById('resultPageFrame');
     resultFrame.src = `https://ru.wikipedia.org/wiki/${encodeURIComponent(target)}`;
     document.getElementById('targetPageContainer').classList.remove('hidden');
-    
+
     // Show winner info
     document.getElementById('winnerInfo').classList.remove('hidden');
     document.getElementById('winnerName').textContent = winnerName;
     document.getElementById('winnerTime').textContent = time;
     document.getElementById('multiplayerResults').classList.remove('hidden');
-    
+
     // Setup ready system
     setupMultiplayerResults();
-    
+
     console.log('✓ Multiplayer results displayed');
 }
 
@@ -1617,7 +1664,7 @@ function leaveRoom() {
 async function playAgain() {
     gameState.currentArticle = 'Главная страница Wikipedia';
     gameState.gameActive = false;
-    
+
     if (gameState.roomCode && gameState.isHost) {
         // In multiplayer, host starts new game
         console.log('🔄 Starting new game in room:', gameState.roomCode);
@@ -1629,7 +1676,7 @@ async function playAgain() {
         // Single player - start new game
         showScreen('countdown');
         document.getElementById('countdownNumber').textContent = 'Загрузка...';
-        
+
         try {
             gameState.targetArticle = await getTargetArticle();
             console.log('✓ New target article loaded:', gameState.targetArticle);
@@ -1637,7 +1684,7 @@ async function playAgain() {
             console.error('✗ Error loading article:', e);
             gameState.targetArticle = 'Альберт Эйнштейн';
         }
-        
+
         startCountdown();
     }
 }
@@ -1649,7 +1696,7 @@ function sendReady() {
             type: 'player_ready',
             playerName: gameState.playerName
         }));
-        
+
         // Update button
         const btnReady = document.getElementById('btnReady');
         btnReady.innerHTML = '<span class="btn-icon">✓</span><span class="btn-label">Готов!</span>';
@@ -1667,18 +1714,18 @@ function updateReadyStatus(players) {
             const color = p.color || '#666';
             const avatarUrl = p.avatarUrl || '';
             const borderStyle = p.borderStyle || 'none';
-            
+
             let avatarStyle = `background: ${color};`;
             let avatarClass = 'player-avatar-small';
             let avatarContent = p.name.charAt(0).toUpperCase();
-            
+
             // If has avatar URL, use it
             if (avatarUrl) {
                 avatarStyle = `background-image: url(${avatarUrl}); background-size: cover; background-position: center;`;
                 avatarClass += ' has-image';
                 avatarContent = '';
             }
-            
+
             if (borderStyle === 'glow') {
                 avatarStyle += ` box-shadow: 0 0 8px ${color}, 0 0 15px ${color};`;
             } else if (borderStyle === 'pulse') {
@@ -1686,12 +1733,12 @@ function updateReadyStatus(players) {
             } else if (borderStyle === 'rainbow') {
                 avatarClass += ' avatar-style-rainbow';
             }
-            
+
             // Ready indicator - host is always ready, others show status
-            const readyIndicator = isHost 
-                ? '' 
+            const readyIndicator = isHost
+                ? ''
                 : `<div class="ready-status ${p.ready ? 'ready' : 'waiting'}">${p.ready ? '✓' : '⏳'}</div>`;
-            
+
             return `
                 <div class="ready-player-item ${p.ready ? 'player-ready' : ''}">
                     <div class="ready-player-info">
@@ -1716,7 +1763,7 @@ function enableStartButton() {
 function setupMultiplayerResults() {
     const btnPlayAgain = document.getElementById('btnPlayAgain');
     const btnReady = document.getElementById('btnReady');
-    
+
     if (gameState.roomCode) {
         if (gameState.isHost) {
             // Host sees "Play again" but disabled until all ready
@@ -1724,7 +1771,7 @@ function setupMultiplayerResults() {
             btnPlayAgain.disabled = true;
             btnPlayAgain.innerHTML = '<span class="btn-icon">⏳</span><span class="btn-label">Ожидание игроков...</span>';
             btnReady.classList.add('hidden');
-            
+
             // Host is ready by default - send ready status
             sendReady();
         } else {
@@ -1734,12 +1781,12 @@ function setupMultiplayerResults() {
             btnReady.disabled = false;
             btnReady.innerHTML = '<span class="btn-icon">✓</span><span class="btn-label">Готов</span>';
         }
-        
+
         // Initialize ready list - host is ready by default
         if (gameState.players) {
-            updateReadyStatus(gameState.players.map(p => ({ 
-                ...p, 
-                ready: p.name === gameState.playerName && gameState.isHost 
+            updateReadyStatus(gameState.players.map(p => ({
+                ...p,
+                ready: p.name === gameState.playerName && gameState.isHost
             })));
         }
     } else {
@@ -1756,14 +1803,14 @@ function backToLobby() {
     gameState.clickCount = 0;
     gameState.currentArticle = 'Главная страница Wikipedia';
     gameState.gameActive = false;
-    
+
     // If in multiplayer - notify server and keep connection
     if (gameState.roomCode && gameState.ws) {
         gameState.ws.send(JSON.stringify({
             type: 'player_to_lobby',
             playerName: gameState.playerName
         }));
-        
+
         // Show room panel again
         showScreen('lobby');
         showRoomPanel(gameState.roomCode, gameState.players, gameState.isHost);
@@ -1778,7 +1825,7 @@ function backToLobby() {
 // Show notification that host went to lobby
 function showHostLobbyNotification(countdown) {
     if (gameState.isHost) return; // Host doesn't need notification
-    
+
     // Create notification element if not exists
     let notification = document.getElementById('hostLobbyNotification');
     if (!notification) {
@@ -1787,7 +1834,7 @@ function showHostLobbyNotification(countdown) {
         notification.className = 'host-lobby-notification';
         document.body.appendChild(notification);
     }
-    
+
     notification.innerHTML = `
         <div class="notification-content">
             <span>👑 Хост вернулся в меню</span>
@@ -1795,7 +1842,7 @@ function showHostLobbyNotification(countdown) {
         </div>
     `;
     notification.classList.add('show');
-    
+
     // Countdown
     let count = countdown;
     const interval = setInterval(() => {
@@ -1815,13 +1862,13 @@ function returnToLobbyWithRoom(code, players) {
     gameState.gameActive = false;
     gameState.roomCode = code;
     gameState.players = players;
-    
+
     // Hide notification
     const notification = document.getElementById('hostLobbyNotification');
     if (notification) {
         notification.classList.remove('show');
     }
-    
+
     // Show lobby with room panel
     showScreen('lobby');
     showRoomPanel(code, players, gameState.isHost);
@@ -1838,7 +1885,7 @@ function toggleHint() {
 // Found target button handler
 function onFoundTarget() {
     if (!gameState.gameActive) return;
-    
+
     const confirmed = confirm(`Вы уверены, что нашли статью "${gameState.targetArticle}"?`);
     if (confirmed) {
         console.log('✓ Player confirmed finding target');
@@ -1851,14 +1898,14 @@ function updateAvatar() {
     const name = gameState.playerName || 'Игрок';
     const avatar = document.getElementById('userAvatar');
     const avatarPreviewLarge = document.getElementById('avatarPreviewLarge');
-    
+
     if (avatar) {
         avatar.textContent = name.charAt(0).toUpperCase();
     }
     if (avatarPreviewLarge) {
         avatarPreviewLarge.textContent = name.charAt(0).toUpperCase();
     }
-    
+
     updateUserDisplay();
 }
 
@@ -1871,37 +1918,37 @@ function initColorWheel() {
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
     const radius = canvas.width / 2;
-    
+
     // Draw color wheel
     for (let angle = 0; angle < 360; angle++) {
         const startAngle = (angle - 1) * Math.PI / 180;
         const endAngle = (angle + 1) * Math.PI / 180;
-        
+
         ctx.beginPath();
         ctx.moveTo(centerX, centerY);
         ctx.arc(centerX, centerY, radius, startAngle, endAngle);
         ctx.closePath();
-        
+
         const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
         gradient.addColorStop(0, 'white');
         gradient.addColorStop(0.5, `hsl(${angle}, 100%, 50%)`);
         gradient.addColorStop(1, `hsl(${angle}, 100%, 25%)`);
-        
+
         ctx.fillStyle = gradient;
         ctx.fill();
     }
-    
+
     // Add click handler
-    canvas.onclick = function(e) {
+    canvas.onclick = function (e) {
         const rect = canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
-        
+
         const imageData = ctx.getImageData(x, y, 1, 1).data;
         const color = `rgb(${imageData[0]}, ${imageData[1]}, ${imageData[2]})`;
-        
+
         setUserColor(color);
-        
+
         // Show indicator
         const indicator = document.getElementById('colorIndicator');
         indicator.style.left = x + 'px';
@@ -1918,17 +1965,17 @@ function selectPresetColor(color) {
 function setUserColor(color) {
     userColor = color;
     localStorage.setItem('userColor', color);
-    
+
     // Update all avatars
     const avatar = document.getElementById('userAvatar');
     const avatarPreviewLarge = document.getElementById('avatarPreviewLarge');
-    
+
     if (avatar) avatar.style.background = color;
     if (avatarPreviewLarge) avatarPreviewLarge.style.background = color;
-    
+
     applyAvatarStyle(avatar);
     applyAvatarStyle(avatarPreviewLarge);
-    
+
     // Broadcast to other players
     broadcastProfileUpdate();
 }
@@ -1939,32 +1986,32 @@ let userBorderStyle = localStorage.getItem('userBorderStyle') || 'none';
 function selectBorderStyle(style) {
     userBorderStyle = style;
     localStorage.setItem('userBorderStyle', style);
-    
+
     // Update active state
     document.querySelectorAll('.border-style-option').forEach(opt => {
         opt.classList.toggle('active', opt.dataset.style === style);
     });
-    
+
     // Apply to avatars
     const avatar = document.getElementById('userAvatar');
     const avatarPreviewLarge = document.getElementById('avatarPreviewLarge');
     applyAvatarStyle(avatar);
     applyAvatarStyle(avatarPreviewLarge);
-    
+
     // Broadcast to other players
     broadcastProfileUpdate();
 }
 
 function applyAvatarStyle(element) {
     if (!element) return;
-    
+
     // Remove all style classes
     element.classList.remove('avatar-style-glow', 'avatar-style-pulse', 'avatar-style-rainbow');
     element.style.boxShadow = '';
-    
+
     const color = localStorage.getItem('userColor') || '#b45328';
     const style = localStorage.getItem('userBorderStyle') || 'none';
-    
+
     switch (style) {
         case 'glow':
             element.style.boxShadow = `0 0 10px ${color}, 0 0 20px ${color}`;
@@ -1983,10 +2030,10 @@ function loadUserColor() {
     const color = localStorage.getItem('userColor') || '#b45328';
     const style = localStorage.getItem('userBorderStyle') || 'none';
     const avatarUrl = localStorage.getItem('userAvatarUrl') || '';
-    
+
     setUserColor(color);
     selectBorderStyle(style);
-    
+
     // Load avatar URL
     if (avatarUrl) {
         document.getElementById('avatarUrlInput').value = avatarUrl;
@@ -2007,7 +2054,7 @@ function getUserCustomization() {
 function applyAvatarUrl() {
     const input = document.getElementById('avatarUrlInput');
     const url = input.value.trim();
-    
+
     if (url) {
         localStorage.setItem('userAvatarUrl', url);
         updateAvatarsWithImage(url);
@@ -2019,19 +2066,19 @@ function applyAvatarUrl() {
 function clearAvatarUrl() {
     localStorage.removeItem('userAvatarUrl');
     document.getElementById('avatarUrlInput').value = '';
-    
+
     const avatars = [
         document.getElementById('userAvatar'),
         document.getElementById('previewAvatar')
     ];
-    
+
     avatars.forEach(avatar => {
         if (avatar) {
             avatar.classList.remove('has-image');
             avatar.style.backgroundImage = '';
         }
     });
-    
+
     broadcastProfileUpdate();
 }
 
@@ -2041,7 +2088,7 @@ function updateAvatarsWithImage(url) {
         document.getElementById('userAvatar'),
         document.getElementById('previewAvatar')
     ];
-    
+
     avatars.forEach(avatar => {
         if (avatar) {
             avatar.classList.add('has-image');
@@ -2067,22 +2114,22 @@ function broadcastProfileUpdate() {
 // Toggle Death 404 mode with animation
 function toggleDeath404Mode(enabled) {
     gameState.death404Mode = enabled;
-    
+
     const death404Card = document.getElementById('death404Card');
     const death404Btn = document.getElementById('death404Toggle');
     const roomDeath404Btn = document.getElementById('roomDeath404Toggle');
     const modifiersTrigger = document.getElementById('modifiersTrigger');
     const roomModifiersTrigger = document.getElementById('roomModifiersTrigger');
-    
+
     if (enabled) {
         document.body.classList.add('death-mode');
         document.body.classList.add('death-mode-activating');
-        
+
         showDeathModeFlash();
-        
+
         document.body.classList.add('screen-shake');
         setTimeout(() => document.body.classList.remove('screen-shake'), 500);
-        
+
         if (death404Card) death404Card.classList.add('active');
         if (death404Btn) {
             death404Btn.classList.add('active');
@@ -2094,17 +2141,17 @@ function toggleDeath404Mode(enabled) {
         }
         if (modifiersTrigger) modifiersTrigger.style.display = 'flex';
         if (roomModifiersTrigger) roomModifiersTrigger.classList.add('show');
-        
+
         setTimeout(() => document.body.classList.remove('death-mode-activating'), 800);
-        
+
     } else {
         document.body.classList.add('death-mode-deactivating');
-        
+
         setTimeout(() => {
             document.body.classList.remove('death-mode');
             document.body.classList.remove('death-mode-deactivating');
         }, 400);
-        
+
         if (death404Card) death404Card.classList.remove('active');
         if (death404Btn) {
             death404Btn.classList.remove('active');
@@ -2116,11 +2163,11 @@ function toggleDeath404Mode(enabled) {
         }
         if (modifiersTrigger) modifiersTrigger.style.display = 'none';
         if (roomModifiersTrigger) roomModifiersTrigger.classList.remove('show');
-        
+
         hideModifiersPanel();
         resetModifiers();
     }
-    
+
     // Notify other players in room
     if (gameState.ws && gameState.roomCode && gameState.isHost) {
         gameState.ws.send(JSON.stringify({
@@ -2129,7 +2176,7 @@ function toggleDeath404Mode(enabled) {
             modifiers: gameState.modifiers
         }));
     }
-    
+
     console.log('Death 404 mode:', enabled ? 'ON' : 'OFF');
 }
 
@@ -2143,7 +2190,7 @@ function showDeathModeFlash() {
         flash.innerHTML = '<span class="flash-skull">💀</span><span class="flash-text">РЕЖИМ 404</span>';
         document.body.appendChild(flash);
     }
-    
+
     flash.classList.add('show');
     setTimeout(() => flash.classList.remove('show'), 1500);
 }
@@ -2164,12 +2211,12 @@ function resetModifiers() {
 // Toggle modifier
 function toggleModifier(modifierName, enabled) {
     gameState.modifiers[modifierName] = enabled;
-    
+
     const item = document.querySelector(`[data-modifier="${modifierName}"]`);
     if (item) {
         item.classList.toggle('active', enabled);
     }
-    
+
     // Get time limit value if applicable
     if (modifierName === 'timeLimit') {
         const timeLimitInput = document.getElementById('timeLimitValue');
@@ -2177,9 +2224,9 @@ function toggleModifier(modifierName, enabled) {
             gameState.timeLimitSeconds = parseInt(timeLimitInput.value) || 120;
         }
     }
-    
+
     updateActiveModifiersTags();
-    
+
     // Notify other players
     if (gameState.ws && gameState.roomCode && gameState.isHost) {
         gameState.ws.send(JSON.stringify({
@@ -2195,7 +2242,7 @@ function toggleModifier(modifierName, enabled) {
 function updateActiveModifiersTags() {
     const tagsContainer = document.getElementById('activeTags');
     const countEl = document.getElementById('modifiersCount');
-    
+
     const modifierNames = {
         randomStart: '🎲 Случайный старт',
         teleport: '🌀 Телепорт',
@@ -2204,23 +2251,23 @@ function updateActiveModifiersTags() {
         blindKitten: '🐱 Слепой котёнок',
         drunk: '🍺 Алкоголик'
     };
-    
+
     const activeModsArray = Object.entries(gameState.modifiers).filter(([_, active]) => active);
     const activeCount = activeModsArray.length;
-    
+
     // Update counter in trigger button
     if (countEl) {
         countEl.textContent = activeCount;
         countEl.style.display = activeCount > 0 ? 'inline' : 'none';
     }
-    
+
     if (tagsContainer) {
         const activeMods = activeModsArray
             .map(([name, _]) => `<span class="modifier-tag">${modifierNames[name]}</span>`)
             .join('');
-        
+
         tagsContainer.innerHTML = activeMods;
-        
+
         const activeModifiers = document.getElementById('activeModifiers');
         if (activeModifiers) {
             activeModifiers.style.display = activeMods ? 'block' : 'none';
@@ -2232,13 +2279,13 @@ function updateActiveModifiersTags() {
 function applyRoomSettings(settings) {
     if (settings.death404Mode !== undefined) {
         gameState.death404Mode = settings.death404Mode;
-        
+
         const roomPanel = document.getElementById('roomPanel');
         const death404Card = document.getElementById('death404Card');
         const death404Btn = document.getElementById('death404Toggle');
         const btnText = death404Btn?.querySelector('.death404-btn-text');
         const modifiersTrigger = document.getElementById('modifiersTrigger');
-        
+
         if (settings.death404Mode) {
             document.body.classList.add('death-mode');
             roomPanel?.classList.add('death-mode-active');
@@ -2262,7 +2309,7 @@ function applyRoomSettings(settings) {
             hideModifiersPanel();
         }
     }
-    
+
     // Apply time limit
     if (settings.timeLimitSeconds !== undefined) {
         gameState.timeLimitSeconds = settings.timeLimitSeconds;
@@ -2271,21 +2318,35 @@ function applyRoomSettings(settings) {
             timeLimitInput.value = settings.timeLimitSeconds;
         }
     }
-    
+
     // Apply modifiers
     if (settings.modifiers) {
         gameState.modifiers = { ...settings.modifiers };
-        
+
         // Update checkboxes
         Object.entries(settings.modifiers).forEach(([name, enabled]) => {
             const checkbox = document.getElementById(`mod${name.charAt(0).toUpperCase() + name.slice(1)}`);
             if (checkbox) checkbox.checked = enabled;
-            
+
             const item = document.querySelector(`[data-modifier="${name}"]`);
             if (item) item.classList.toggle('active', enabled);
         });
-        
+
         updateActiveModifiersTags();
+    }
+
+    // Apply max players
+    if (settings.maxPlayers !== undefined) {
+        maxPlayers = settings.maxPlayers;
+        const display = document.getElementById('maxPlayersDisplay');
+        if (display) display.textContent = maxPlayers;
+
+        // Update wheel position
+        const index = wheelValues.indexOf(maxPlayers);
+        if (index !== -1) {
+            wheelIndex = index;
+            updateWheelPosition();
+        }
     }
 }
 
@@ -2304,23 +2365,23 @@ function copyRoomCode() {
 // Event listeners
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 DOM loaded, initializing...');
-    
+
     try {
         // Load saved nickname
         loadNickname();
-        
+
         // Load user color
         loadUserColor();
-        
+
         // Update avatar on load
         updateAvatar();
-        
+
         // Display leaderboard
         displayLeaderboard();
     } catch (e) {
         console.error('Init error:', e);
     }
-    
+
     // Close color picker when clicking outside
     document.addEventListener('click', (e) => {
         const popup = document.getElementById('colorPickerPopup');
@@ -2331,7 +2392,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
-    
+
     // Player name input
     const playerNameInput = document.getElementById('playerName');
     if (playerNameInput) {
@@ -2340,40 +2401,40 @@ document.addEventListener('DOMContentLoaded', () => {
             saveNickname(playerNameInput.value);
         });
     }
-    
+
     // Lobby buttons
     const btnSinglePlayer = document.getElementById('btnSinglePlayer');
     const btnCreateRoom = document.getElementById('btnCreateRoom');
     const btnJoinRoom = document.getElementById('btnJoinRoom');
     const btnJoinConfirm = document.getElementById('btnJoinConfirm');
-    
+
     console.log('Buttons found:', { btnSinglePlayer: !!btnSinglePlayer, btnCreateRoom: !!btnCreateRoom, btnJoinRoom: !!btnJoinRoom });
-    
+
     if (btnSinglePlayer) btnSinglePlayer.addEventListener('click', () => { console.log('Single player clicked'); startSinglePlayer(); });
     if (btnCreateRoom) btnCreateRoom.addEventListener('click', () => { console.log('Create room clicked'); createRoom(); });
     if (btnJoinRoom) btnJoinRoom.addEventListener('click', () => { console.log('Join room clicked'); slideToJoin(); });
     if (btnJoinConfirm) btnJoinConfirm.addEventListener('click', () => { console.log('Join confirm clicked'); joinRoomConfirm(); });
-    
+
     // Back buttons for slides
     const btnBackToMenu = document.getElementById('btnBackToMenu');
     const btnBackFromJoin = document.getElementById('btnBackFromJoin');
-    
+
     if (btnBackToMenu) btnBackToMenu.addEventListener('click', () => {
         leaveRoom();
         hideRoomPanel();
     });
     if (btnBackFromJoin) btnBackFromJoin.addEventListener('click', slideToMenu);
-    
+
     // Room panel buttons
     const btnStartGamePanel = document.getElementById('btnStartGamePanel');
     const btnReadyLobby = document.getElementById('btnReadyLobby');
-    
+
     if (btnStartGamePanel) btnStartGamePanel.addEventListener('click', startGameHost);
     if (btnReadyLobby) btnReadyLobby.addEventListener('click', sendReadyLobby);
-    
+
     const roomCodeDisplay = document.getElementById('roomCodeDisplay');
     if (roomCodeDisplay) roomCodeDisplay.addEventListener('click', copyRoomCodePanel);
-    
+
     // Death 404 mode toggle (button style) - main menu
     const death404Toggle = document.getElementById('death404Toggle');
     if (death404Toggle) {
@@ -2383,7 +2444,7 @@ document.addEventListener('DOMContentLoaded', () => {
             toggleDeath404Mode(newState);
         });
     }
-    
+
     // Death 404 mode toggle - room settings
     const roomDeath404Toggle = document.getElementById('roomDeath404Toggle');
     if (roomDeath404Toggle) {
@@ -2399,43 +2460,63 @@ document.addEventListener('DOMContentLoaded', () => {
             if (modBtn) modBtn.classList.toggle('show', newState);
         });
     }
-    
+
     // Room modifiers trigger
     const roomModifiersTrigger = document.getElementById('roomModifiersTrigger');
     if (roomModifiersTrigger) {
         roomModifiersTrigger.addEventListener('click', showModifiersPanel);
     }
-    
+
     // Max players selector
     const playersCountBtn = document.getElementById('playersCountBtn');
     if (playersCountBtn) {
         playersCountBtn.addEventListener('click', showMaxPlayersPopup);
     }
-    
-    document.querySelectorAll('.wheel-option').forEach(opt => {
-        opt.addEventListener('click', () => {
-            selectMaxPlayers(parseInt(opt.dataset.value));
+
+    // Wheel arrows
+    const wheelUpBtn = document.getElementById('wheelUp');
+    const wheelDownBtn = document.getElementById('wheelDown');
+    if (wheelUpBtn) wheelUpBtn.addEventListener('click', wheelUp);
+    if (wheelDownBtn) wheelDownBtn.addEventListener('click', wheelDown);
+
+    // Wheel numbers click
+    document.querySelectorAll('.wheel-num').forEach(num => {
+        num.addEventListener('click', () => {
+            selectMaxPlayers(parseInt(num.dataset.value));
         });
     });
-    
+
+    // Wheel scroll support
+    const numberWheel = document.getElementById('numberWheel');
+    if (numberWheel) {
+        numberWheel.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            if (e.deltaY > 0) {
+                wheelDown();
+            } else {
+                wheelUp();
+            }
+        });
+    }
+
     const maxPlayersConfirm = document.getElementById('maxPlayersConfirm');
     if (maxPlayersConfirm) {
         maxPlayersConfirm.addEventListener('click', confirmMaxPlayers);
     }
-    
+
     // Close max players popup on outside click
     const maxPlayersPopup = document.getElementById('maxPlayersPopup');
     if (maxPlayersPopup) {
         document.addEventListener('click', (e) => {
-            if (maxPlayersPopup.classList.contains('show') && 
-                !maxPlayersPopup.contains(e.target) && 
+            if (maxPlayersPopup.classList.contains('show') &&
+                !maxPlayersPopup.contains(e.target) &&
                 e.target !== playersCountBtn &&
                 !playersCountBtn?.contains(e.target)) {
                 hideMaxPlayersPopup();
             }
         });
     }
-    
+
     // Modifier items in modal - hover for details, click to toggle
     document.querySelectorAll('.mod-item').forEach(item => {
         item.addEventListener('mouseenter', () => {
@@ -2447,7 +2528,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
-    
+
     // Toggle buttons in modal
     document.querySelectorAll('.toggle-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -2455,14 +2536,14 @@ document.addEventListener('DOMContentLoaded', () => {
             toggleModifierFromModal(btn.dataset.modifier);
         });
     });
-    
+
     // Time limit input
     const timeLimitInput = document.getElementById('timeLimitValue');
     if (timeLimitInput) {
         timeLimitInput.addEventListener('change', (e) => {
             gameState.timeLimitSeconds = parseInt(e.target.value) || 120;
             updateActiveModifiersTags();
-            
+
             // Notify other players if host
             if (gameState.ws && gameState.roomCode && gameState.isHost) {
                 gameState.ws.send(JSON.stringify({
@@ -2473,45 +2554,45 @@ document.addEventListener('DOMContentLoaded', () => {
                 }));
             }
         });
-        
+
         // Prevent click from toggling modifier description
         timeLimitInput.addEventListener('click', (e) => {
             e.stopPropagation();
         });
     }
-    
+
     // Multiplayer lobby (old - keep for compatibility)
     const btnStartGame = document.getElementById('btnStartGame');
     const btnLeaveRoom = document.getElementById('btnLeaveRoom');
     if (btnStartGame) btnStartGame.addEventListener('click', startGameHost);
     if (btnLeaveRoom) btnLeaveRoom.addEventListener('click', leaveRoom);
-    
+
     // Game - toggle hint
     const btnToggleHint = document.getElementById('btnToggleHint');
     if (btnToggleHint) btnToggleHint.addEventListener('click', toggleHint);
-    
+
     // Game - found target button
     const btnFoundTarget = document.getElementById('btnFoundTarget');
     if (btnFoundTarget) btnFoundTarget.addEventListener('click', onFoundTarget);
-    
+
     // Results
     const btnPlayAgain = document.getElementById('btnPlayAgain');
     const btnReady = document.getElementById('btnReady');
     const btnBackToLobby = document.getElementById('btnBackToLobby');
-    
+
     if (btnPlayAgain) btnPlayAgain.addEventListener('click', playAgain);
     if (btnReady) btnReady.addEventListener('click', sendReady);
     if (btnBackToLobby) btnBackToLobby.addEventListener('click', backToLobby);
-    
+
     // Connect WebSocket (with error handling)
     try {
         connectWebSocket();
     } catch (e) {
         console.error('WebSocket init error:', e);
     }
-    
+
     console.log('✅ All event listeners attached');
-    
+
     // Modifiers panel scroll indicator
     const modifiersPanel = document.getElementById('modifiersPanel');
     if (modifiersPanel) {
@@ -2524,7 +2605,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 1000);
         });
     }
-    
+
     // Modifiers trigger button - opens modifiers modal
     const modifiersTrigger = document.getElementById('modifiersTrigger');
     if (modifiersTrigger) {
@@ -2532,19 +2613,19 @@ document.addEventListener('DOMContentLoaded', () => {
             showModifiersPanel();
         });
     }
-    
+
     // Modifiers modal close button
     const modifiersModalClose = document.getElementById('modifiersModalClose');
     if (modifiersModalClose) {
         modifiersModalClose.addEventListener('click', hideModifiersPanel);
     }
-    
+
     // Modifiers modal confirm button
     const modifiersConfirm = document.getElementById('modifiersConfirm');
     if (modifiersConfirm) {
         modifiersConfirm.addEventListener('click', hideModifiersPanel);
     }
-    
+
     // Modifiers modal - click overlay to close
     const modifiersModal = document.getElementById('modifiersModal');
     if (modifiersModal) {
@@ -2554,20 +2635,20 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-    
+
     // Modifier rows in modal - hover for details, click to toggle
     document.querySelectorAll('.modifier-row').forEach(row => {
         row.addEventListener('mouseenter', () => {
             showModifierDetails(row.dataset.modifier);
         });
-        
+
         row.addEventListener('click', (e) => {
             if (!e.target.classList.contains('toggle-btn')) {
                 toggleModifierFromModal(row.dataset.modifier);
             }
         });
     });
-    
+
     // Toggle buttons in modal
     document.querySelectorAll('.toggle-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -2575,14 +2656,14 @@ document.addEventListener('DOMContentLoaded', () => {
             toggleModifierFromModal(btn.dataset.modifier);
         });
     });
-    
+
     // Time limit input in modal
     const timeLimitValueModal = document.getElementById('timeLimitValueModal');
     if (timeLimitValueModal) {
         timeLimitValueModal.addEventListener('change', (e) => {
             gameState.timeLimitSeconds = parseInt(e.target.value) || 120;
             updateActiveModifiersTags();
-            
+
             if (gameState.ws && gameState.roomCode && gameState.isHost) {
                 gameState.ws.send(JSON.stringify({
                     type: 'room_settings',
@@ -2593,19 +2674,19 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-    
+
     // How to play button
     const btnHowToPlay = document.getElementById('btnHowToPlay');
     if (btnHowToPlay) {
         btnHowToPlay.addEventListener('click', showHowToPlayModal);
     }
-    
+
     // How to play modal close
     const howToPlayModalClose = document.getElementById('howToPlayModalClose');
     if (howToPlayModalClose) {
         howToPlayModalClose.addEventListener('click', hideHowToPlayModal);
     }
-    
+
     // How to play modal - click overlay to close
     const howToPlayModal = document.getElementById('howToPlayModal');
     if (howToPlayModal) {
@@ -2615,14 +2696,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-    
+
     // Help topics navigation
     document.querySelectorAll('.help-tab').forEach(tab => {
         tab.addEventListener('click', () => {
             // Update active state
             document.querySelectorAll('.help-tab').forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
-            
+
             // Show corresponding content
             const topicName = tab.dataset.topic;
             document.querySelectorAll('.help-page').forEach(page => {
@@ -2630,13 +2711,13 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
     });
-    
+
     // Global keyboard handler
     document.addEventListener('keydown', handleGlobalKeyboard);
-    
+
     // Initialize new modifiers UI
     initModifiersUI();
-    
+
     // Initialize target search
     initTargetSearch();
 });
@@ -2653,7 +2734,7 @@ function initModifiersUI() {
             toggleModifierNew(modName, toggle);
         });
     });
-    
+
     // Mod items click
     document.querySelectorAll('.mod-item').forEach(item => {
         item.addEventListener('click', (e) => {
@@ -2669,35 +2750,35 @@ function initModifiersUI() {
 function toggleModifierNew(modName, toggleBtn) {
     const newState = !gameState.modifiers[modName];
     gameState.modifiers[modName] = newState;
-    
+
     const item = document.querySelector(`.mod-item[data-modifier="${modName}"]`);
-    
+
     // Toggle button state
     if (toggleBtn) {
         toggleBtn.classList.toggle('active', newState);
     }
-    
+
     // Item state
     if (item) {
         item.classList.toggle('active', newState);
-        
+
         // Activation animation
         if (newState) {
             item.classList.add('activating');
             setTimeout(() => item.classList.remove('activating'), 400);
-            
+
             // Flash effect
             showHardcoreFlash();
         }
     }
-    
+
     // Update count
     updateModifiersCount();
-    
+
     // Sync with old UI
     updateModifiersModalState();
     updateActiveModifiersTags();
-    
+
     // Notify server
     if (gameState.ws && gameState.roomCode && gameState.isHost) {
         gameState.ws.send(JSON.stringify({
@@ -2714,30 +2795,30 @@ function showHardcoreFlash() {
     const flash = document.createElement('div');
     flash.className = 'hardcore-flash';
     document.body.appendChild(flash);
-    
+
     setTimeout(() => flash.remove(), 600);
 }
 
 // Update modifiers count display
 function updateModifiersCount() {
     const count = Object.values(gameState.modifiers).filter(v => v).length;
-    
+
     const countEl = document.getElementById('activeModifiersCount');
     if (countEl) {
         countEl.textContent = count;
-        
+
         // Animate count change
         countEl.style.transform = 'scale(1.3)';
         setTimeout(() => countEl.style.transform = 'scale(1)', 200);
     }
-    
+
     // Update trigger counts
     const triggerCount = document.getElementById('modifiersCount');
     if (triggerCount) {
         triggerCount.textContent = count;
         triggerCount.style.display = count > 0 ? 'inline' : 'none';
     }
-    
+
     const roomCount = document.getElementById('roomModifiersCount');
     if (roomCount) {
         roomCount.textContent = count;
@@ -2756,47 +2837,47 @@ function initTargetSearch() {
     const suggestions = document.getElementById('targetSuggestions');
     const clearBtn = document.getElementById('targetClearBtn');
     const randomBtn = document.getElementById('targetRandomBtn');
-    
+
     if (!input) return;
-    
+
     // Search input handler
     input.addEventListener('input', (e) => {
         const query = e.target.value.trim();
-        
+
         if (searchTimeout) clearTimeout(searchTimeout);
-        
+
         if (query.length < 2) {
             hideSuggestions();
             return;
         }
-        
+
         // Debounce search
         searchTimeout = setTimeout(() => {
             searchWikipediaArticles(query);
         }, 300);
     });
-    
+
     // Focus/blur handlers
     input.addEventListener('focus', () => {
         if (input.value.trim().length >= 2) {
             suggestions.classList.add('show');
         }
     });
-    
+
     // Click outside to close
     document.addEventListener('click', (e) => {
         if (!e.target.closest('.target-search-wrap')) {
             hideSuggestions();
         }
     });
-    
+
     // Clear button
     if (clearBtn) {
         clearBtn.addEventListener('click', () => {
             clearTargetSelection();
         });
     }
-    
+
     // Random button
     if (randomBtn) {
         randomBtn.addEventListener('click', () => {
@@ -2809,37 +2890,37 @@ function initTargetSearch() {
 async function searchWikipediaArticles(query) {
     const suggestions = document.getElementById('targetSuggestions');
     if (!suggestions) return;
-    
+
     // Show loading
     suggestions.innerHTML = '<div class="suggestion-loading">🔍 Поиск...</div>';
     suggestions.classList.add('show');
-    
+
     try {
         const url = `https://ru.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(query)}&limit=8&namespace=0&format=json&origin=*`;
         const response = await fetch(url);
         const data = await response.json();
-        
+
         const titles = data[1] || [];
-        
+
         if (titles.length === 0) {
             suggestions.innerHTML = '<div class="suggestion-loading">Ничего не найдено</div>';
             return;
         }
-        
+
         suggestions.innerHTML = titles.map(title => `
             <div class="suggestion-item" data-title="${title}">
                 <span class="suggestion-icon">📄</span>
                 <span class="suggestion-text">${title}</span>
             </div>
         `).join('');
-        
+
         // Add click handlers
         suggestions.querySelectorAll('.suggestion-item').forEach(item => {
             item.addEventListener('click', () => {
                 selectTargetArticle(item.dataset.title);
             });
         });
-        
+
     } catch (e) {
         console.error('Search error:', e);
         suggestions.innerHTML = '<div class="suggestion-loading">Ошибка поиска</div>';
@@ -2849,34 +2930,34 @@ async function searchWikipediaArticles(query) {
 // Select target article
 function selectTargetArticle(title) {
     customTargetArticle = title;
-    
+
     const input = document.getElementById('targetSearchInput');
     const selectedValue = document.getElementById('targetSelectedValue');
-    
+
     if (input) input.value = '';
     if (selectedValue) {
         selectedValue.textContent = `📄 ${title}`;
         selectedValue.classList.add('has-target');
     }
-    
+
     hideSuggestions();
-    
+
     console.log('✓ Custom target selected:', title);
 }
 
 // Clear target selection
 function clearTargetSelection() {
     customTargetArticle = null;
-    
+
     const input = document.getElementById('targetSearchInput');
     const selectedValue = document.getElementById('targetSelectedValue');
-    
+
     if (input) input.value = '';
     if (selectedValue) {
         selectedValue.textContent = '🎲 Случайная статья';
         selectedValue.classList.remove('has-target');
     }
-    
+
     console.log('✓ Target reset to random');
 }
 
