@@ -338,40 +338,147 @@
 
     <!-- Модальное окно "Как играть" -->
     <div class="modal-overlay" id="howToPlayModal">
-        <div class="modal-box">
+        <div class="modal-box help-modal">
             <div class="modal-head">
-                <h2>Как играть</h2>
+                <h2>📖 Как играть</h2>
                 <button class="modal-x" id="howToPlayModalClose">×</button>
             </div>
-            <div class="modal-content">
+            <div class="modal-content help-content">
+                <!-- Навигация -->
                 <div class="help-nav">
-                    <div class="help-tab active" data-topic="basics">Основы</div>
-                    <div class="help-tab" data-topic="multiplayer">Мультиплеер</div>
-                    <div class="help-tab" data-topic="mode404">Режим 404</div>
-                    <div class="help-tab" data-topic="tips">Советы</div>
+                    <div class="help-tab active" data-topic="basics">
+                        <span class="help-tab-icon">🎮</span>
+                        <span class="help-tab-text">Основы</span>
+                    </div>
+                    <div class="help-tab" data-topic="multiplayer">
+                        <span class="help-tab-icon">👥</span>
+                        <span class="help-tab-text">Мультиплеер</span>
+                    </div>
+                    <div class="help-tab" data-topic="mode404">
+                        <span class="help-tab-icon">💀</span>
+                        <span class="help-tab-text">Режим 404</span>
+                    </div>
+                    <div class="help-tab" data-topic="tips">
+                        <span class="help-tab-icon">💡</span>
+                        <span class="help-tab-text">Советы</span>
+                    </div>
                 </div>
+
+                <!-- Контент -->
                 <div class="help-body" id="helpContent">
                     <div class="help-page" data-topic="basics">
-                        <h3>Основы игры</h3>
-                        <p>Игра основана на теории шести рукопожатий.</p>
-                        <p><b>Цель:</b> Найти путь от главной страницы Википедии до целевой статьи по ссылкам.</p>
-                        <p><b>Победа:</b> Кто быстрее найдёт — тот победил!</p>
+                        <div class="help-page-header">
+                            <span class="help-page-icon">🎮</span>
+                            <h3>Основы игры</h3>
+                        </div>
+                        <div class="help-card">
+                            <div class="help-card-icon">🌐</div>
+                            <div class="help-card-content">
+                                <div class="help-card-title">Теория 6 рукопожатий</div>
+                                <p>Любые две статьи Википедии связаны цепочкой ссылок длиной не более 6 переходов.</p>
+                            </div>
+                        </div>
+                        <div class="help-card">
+                            <div class="help-card-icon">🎯</div>
+                            <div class="help-card-content">
+                                <div class="help-card-title">Цель игры</div>
+                                <p>Найти путь от главной страницы Википедии до целевой статьи, переходя только по
+                                    ссылкам.</p>
+                            </div>
+                        </div>
+                        <div class="help-card">
+                            <div class="help-card-icon">🏆</div>
+                            <div class="help-card-content">
+                                <div class="help-card-title">Победа</div>
+                                <p>Кто быстрее найдёт целевую статью — тот и победил!</p>
+                            </div>
+                        </div>
                     </div>
+
                     <div class="help-page hidden" data-topic="multiplayer">
-                        <h3>Мультиплеер</h3>
-                        <p><b>Создать:</b> Нажмите "Создать" и поделитесь кодом.</p>
-                        <p><b>Войти:</b> Введите код комнаты.</p>
+                        <div class="help-page-header">
+                            <span class="help-page-icon">👥</span>
+                            <h3>Мультиплеер</h3>
+                        </div>
+                        <div class="help-card">
+                            <div class="help-card-icon">➕</div>
+                            <div class="help-card-content">
+                                <div class="help-card-title">Создать комнату</div>
+                                <p>Нажмите "Создать" и поделитесь 6-значным кодом с друзьями.</p>
+                            </div>
+                        </div>
+                        <div class="help-card">
+                            <div class="help-card-icon">🚪</div>
+                            <div class="help-card-content">
+                                <div class="help-card-title">Войти в комнату</div>
+                                <p>Введите код комнаты и присоединяйтесь к игре.</p>
+                            </div>
+                        </div>
+                        <div class="help-card">
+                            <div class="help-card-icon">✓</div>
+                            <div class="help-card-content">
+                                <div class="help-card-title">Готовность</div>
+                                <p>Все игроки должны нажать "Готов" перед началом игры.</p>
+                            </div>
+                        </div>
                     </div>
+
                     <div class="help-page hidden" data-topic="mode404">
-                        <h3>Режим 404</h3>
-                        <p>Хардкорный режим с усложнениями!</p>
-                        <p>Телепорт, лимит времени, скрытая цель и другое.</p>
+                        <div class="help-page-header">
+                            <span class="help-page-icon">💀</span>
+                            <h3>Режим 404</h3>
+                        </div>
+                        <div class="help-card danger">
+                            <div class="help-card-icon">⚠️</div>
+                            <div class="help-card-content">
+                                <div class="help-card-title">Хардкор режим</div>
+                                <p>Включает дополнительные усложнения для настоящих профи!</p>
+                            </div>
+                        </div>
+                        <div class="help-card">
+                            <div class="help-card-icon">🎲</div>
+                            <div class="help-card-content">
+                                <div class="help-card-title">Случайный старт</div>
+                                <p>Начинаете не с главной, а со случайной статьи.</p>
+                            </div>
+                        </div>
+                        <div class="help-card">
+                            <div class="help-card-icon">🌀</div>
+                            <div class="help-card-content">
+                                <div class="help-card-title">Телепорт</div>
+                                <p>Каждые 15 секунд вас переносит на случайную страницу.</p>
+                            </div>
+                        </div>
+                        <div class="help-card">
+                            <div class="help-card-icon">⏱️</div>
+                            <div class="help-card-content">
+                                <div class="help-card-title">Лимит времени</div>
+                                <p>Ограниченное время на поиск цели.</p>
+                            </div>
+                        </div>
                     </div>
+
                     <div class="help-page hidden" data-topic="tips">
-                        <h3>Советы</h3>
-                        <p>• Используйте общие категории как промежуточные точки</p>
-                        <p>• Читайте первый абзац — там полезные ссылки</p>
-                        <p>• ESC — закрыть окно</p>
+                        <div class="help-page-header">
+                            <span class="help-page-icon">💡</span>
+                            <h3>Советы</h3>
+                        </div>
+                        <div class="help-tip">
+                            <span class="tip-number">1</span>
+                            <p>Используйте общие категории (страны, годы, науки) как промежуточные точки.</p>
+                        </div>
+                        <div class="help-tip">
+                            <span class="tip-number">2</span>
+                            <p>Читайте первый абзац статьи — там обычно самые полезные ссылки.</p>
+                        </div>
+                        <div class="help-tip">
+                            <span class="tip-number">3</span>
+                            <p>Статьи о странах и городах связаны почти со всем.</p>
+                        </div>
+                        <div class="help-tip">
+                            <span class="tip-number">4</span>
+                            <p>Нажмите <kbd>ESC</kbd> чтобы закрыть любое окно.</p>
+                        </div>
                     </div>
                 </div>
             </div>

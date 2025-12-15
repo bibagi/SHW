@@ -513,27 +513,151 @@ function toggleModifierFromModal(modName) {
 
 // Global keyboard handler
 function handleGlobalKeyboard(e) {
-    // ESC - close modals
+    const modifiersModal = document.getElementById('modifiersModal');
+    const howToPlayModal = document.getElementById('howToPlayModal');
+    const colorPickerPopup = document.getElementById('colorPickerPopup');
+    const maxPlayersPopup = document.getElementById('maxPlayersPopup');
+    const lobbyScreen = document.getElementById('lobby');
+    const gameScreen = document.getElementById('game');
+    const resultsScreen = document.getElementById('results');
+    
+    // Don't handle if typing in input
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        // Allow ESC to blur input
+        if (e.key === 'Escape') {
+            e.target.blur();
+        }
+        return;
+    }
+    
+    // ESC - close modals/popups or exit game
     if (e.key === 'Escape') {
-        const modifiersModal = document.getElementById('modifiersModal');
-        const howToPlayModal = document.getElementById('howToPlayModal');
+        e.preventDefault();
+        
+        // Close modals in order of priority
+        if (modifiersModal?.classList.contains('show')) {
+            hideModifiersPanel();
+        } else if (howToPlayModal?.classList.contains('show')) {
+            hideHowToPlayModal();
+        } else if (colorPickerPopup?.classList.contains('show')) {
+            toggleColorPicker();
+        } else if (maxPlayersPopup?.classList.contains('show')) {
+            hideMaxPlayersPopup();
+        } else if (gameScreen?.classList.contains('active')) {
+            // In game - confirm exit
+            if (confirm('Выйти из игры?')) {
+                backToLobby();
+            }
+        }
+        return;
+    }
+    
+    // Enter - confirm actions
+    if (e.key === 'Enter') {
+        e.preventDefault();
         
         if (modifiersModal?.classList.contains('show')) {
             hideModifiersPanel();
-            e.preventDefault();
         } else if (howToPlayModal?.classList.contains('show')) {
             hideHowToPlayModal();
-            e.preventDefault();
+        } else if (maxPlayersPopup?.classList.contains('show')) {
+            confirmMaxPlayers();
+        } else if (lobbyScreen?.classList.contains('active')) {
+            // In lobby - start single player or ready
+            const slideMenu = document.getElementById('slideMenu');
+            const slideRoom = document.getElementById('slideRoom');
+            
+            if (slideMenu?.classList.contains('active')) {
+                // Main menu - start single player
+                startSinglePlayer();
+            } else if (slideRoom?.classList.contains('active')) {
+                // In room
+                if (gameState.isHost) {
+                    const btnStart = document.getElementById('btnStartGamePanel');
+                    if (btnStart && !btnStart.disabled) {
+                        startGameHost();
+                    }
+                } else {
+                    sendReadyLobby();
+                }
+            }
+        } else if (resultsScreen?.classList.contains('active')) {
+            // In results - play again or ready
+            if (gameState.roomCode) {
+                if (gameState.isHost) {
+                    const btnPlayAgain = document.getElementById('btnPlayAgain');
+                    if (btnPlayAgain && !btnPlayAgain.disabled) {
+                        playAgain();
+                    }
+                } else {
+                    sendReady();
+                }
+            } else {
+                playAgain();
+            }
         }
+        return;
     }
     
-    // Enter - confirm in modals
-    if (e.key === 'Enter') {
-        const modifiersModal = document.getElementById('modifiersModal');
-        if (modifiersModal?.classList.contains('show')) {
-            hideModifiersPanel();
+    // Space - same as Enter in some contexts
+    if (e.key === ' ' || e.code === 'Space') {
+        if (resultsScreen?.classList.contains('active')) {
             e.preventDefault();
+            if (!gameState.roomCode) {
+                playAgain();
+            }
         }
+        return;
+    }
+    
+    // H - show how to play (in lobby)
+    if ((e.key === 'h' || e.key === 'H' || e.key === 'р' || e.key === 'Р') && lobbyScreen?.classList.contains('active')) {
+        if (!modifiersModal?.classList.contains('show') && !howToPlayModal?.classList.contains('show')) {
+            e.preventDefault();
+            showHowToPlayModal();
+        }
+        return;
+    }
+    
+    // M - show modifiers (in lobby)
+    if ((e.key === 'm' || e.key === 'M' || e.key === 'ь' || e.key === 'Ь') && lobbyScreen?.classList.contains('active')) {
+        if (!modifiersModal?.classList.contains('show') && !howToPlayModal?.classList.contains('show')) {
+            e.preventDefault();
+            showModifiersPanel();
+        }
+        return;
+    }
+    
+    // 1-4 - quick tab switch in help modal
+    if (howToPlayModal?.classList.contains('show')) {
+        const tabs = ['basics', 'multiplayer', 'mode404', 'tips'];
+        const num = parseInt(e.key);
+        if (num >= 1 && num <= 4) {
+            e.preventDefault();
+            const tab = document.querySelector(`.help-tab[data-topic="${tabs[num - 1]}"]`);
+            if (tab) tab.click();
+        }
+        return;
+    }
+    
+    // Arrow keys - navigate tabs in modals
+    if (howToPlayModal?.classList.contains('show')) {
+        const activeTab = document.querySelector('.help-tab.active');
+        if (activeTab) {
+            let nextTab = null;
+            if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+                nextTab = activeTab.nextElementSibling;
+                if (!nextTab) nextTab = document.querySelector('.help-tab');
+            } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+                nextTab = activeTab.previousElementSibling;
+                if (!nextTab) nextTab = document.querySelector('.help-tab:last-child');
+            }
+            if (nextTab && nextTab.classList.contains('help-tab')) {
+                e.preventDefault();
+                nextTab.click();
+            }
+        }
+        return;
     }
 }
 
