@@ -832,6 +832,12 @@ function updatePlayerProgress(playerName, article, clicks) {
 function showScreen(screenId) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById(screenId).classList.add('active');
+    
+    // Hide footer on game screen
+    const footer = document.getElementById('siteFooter');
+    if (footer) {
+        footer.style.display = screenId === 'game' ? 'none' : 'flex';
+    }
 }
 
 // Load nickname from localStorage

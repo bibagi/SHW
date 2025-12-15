@@ -2686,3 +2686,40 @@ body.death-mode .setting-toggle.active {
     .countdown-num { font-size: 6rem; }
     .results-title { font-size: 1.6rem; }
 }
+
+/* ========== SITE FOOTER ========== */
+.site-footer {
+    position: fixed;
+    bottom: 16px;
+    right: 20px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    color: var(--muted-foreground);
+    opacity: 0.6;
+    z-index: 50;
+    transition: opacity 0.2s;
+}
+
+.site-footer:hover {
+    opacity: 1;
+}
+
+.site-footer a {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.2s;
+}
+
+.site-footer a:hover {
+    color: var(--accent);
+    text-decoration: underline;
+}
+
+/* Hide footer on game screen */
+#game.active ~ .site-footer,
+body:has(#game.active) .site-footer {
+    display: none;
+}
