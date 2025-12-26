@@ -4,24 +4,98 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Шесть Рукопожатий Википедии</title>
+    <title>Шесть Рукопожатий Википедии — Онлайн игра</title>
+
+    <!-- SEO Meta Tags -->
+    <meta name="description"
+        content="Бесплатная онлайн-игра по мотивам теории шести рукопожатий. Найди путь от главной страницы Википедии до случайной статьи за минимум кликов. Играй один или с друзьями!">
+    <meta name="keywords" content="википедия, игра, шесть рукопожатий, wiki game, онлайн игра, мультиплеер, бесплатно">
+    <meta name="author" content="ШРВ">
+    <meta name="robots" content="index, follow">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://шрв.рф/">
+    <meta property="og:title" content="Шесть Рукопожатий Википедии">
+    <meta property="og:description"
+        content="Найди путь от главной страницы Википедии до случайной статьи. Играй один или с друзьями!">
+    <meta property="og:image" content="https://шрв.рф/preview.png">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Шесть Рукопожатий Википедии">
+    <meta name="twitter:description"
+        content="Найди путь от главной страницы Википедии до случайной статьи. Играй один или с друзьями!">
+
+    <!-- Theme Color -->
+    <meta name="theme-color" content="#b45328">
+
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 
 <body>
+    <!-- Снежинки -->
+    <div class="snowflakes" aria-hidden="true">
+        <div class="snowflake">❄</div>
+        <div class="snowflake">❅</div>
+        <div class="snowflake">❆</div>
+        <div class="snowflake">❄</div>
+        <div class="snowflake">❅</div>
+        <div class="snowflake">❆</div>
+        <div class="snowflake">❄</div>
+        <div class="snowflake">❅</div>
+        <div class="snowflake">❆</div>
+        <div class="snowflake">❄</div>
+        <div class="snowflake">❅</div>
+        <div class="snowflake">❆</div>
+    </div>
+
+    <!-- Новогодняя гирлянда -->
+    <div class="garland">
+        <span class="light"></span>
+        <span class="light"></span>
+        <span class="light"></span>
+        <span class="light"></span>
+        <span class="light"></span>
+        <span class="light"></span>
+        <span class="light"></span>
+        <span class="light"></span>
+        <span class="light"></span>
+        <span class="light"></span>
+        <span class="light"></span>
+        <span class="light"></span>
+        <span class="light"></span>
+        <span class="light"></span>
+        <span class="light"></span>
+    </div>
+
+    <!-- Toast уведомления -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Beta badge -->
+    <div class="beta-badge">BETA 0.1</div>
+
+    <!-- Большие цифры 2026 на фоне -->
+    <div class="year-background">
+        <span class="year-digit">2</span>
+        <span class="year-digit">0</span>
+        <span class="year-digit">2</span>
+        <span class="year-digit">6</span>
+    </div>
+
     <!-- Анимированный фон -->
     <div class="animated-bg">
         <div class="grid-lines"></div>
         <div class="floating-icons">
-            <span class="float-icon">W</span>
-            <span class="float-icon">6</span>
-            <span class="float-icon">→</span>
-            <span class="float-icon">?</span>
-            <span class="float-icon">W</span>
-            <span class="float-icon">+</span>
-            <span class="float-icon">1</span>
-            <span class="float-icon">→</span>
+            <span class="float-icon">❄</span>
+            <span class="float-icon">✨</span>
+            <span class="float-icon">❅</span>
+            <span class="float-icon">⭐</span>
+            <span class="float-icon">❆</span>
+            <span class="float-icon">✨</span>
+            <span class="float-icon">❄</span>
+            <span class="float-icon">⭐</span>
         </div>
         <div class="noise"></div>
     </div>
@@ -32,111 +106,89 @@
             <!-- Главное меню (центр) -->
             <div class="slide slide-menu active" id="slideMenu">
                 <div class="menu-center">
-                    <!-- Двухколоночный layout -->
-                    <div class="menu-layout">
-                        <!-- Левая колонка - заголовок + кнопки -->
-                        <div class="menu-left">
-                            <!-- Заголовок -->
-                            <div class="menu-header">
-                                <h1 class="menu-title">
-                                    Шесть Рукопожатий
-                                    <span class="title-accent">Википедии</span>
-                                </h1>
-                                <p class="menu-desc">
-                                    Найди путь от главной страницы Wikipedia до случайной статьи
-                                </p>
-                            </div>
-                            
-                            <!-- Режим 404 -->
-                            <div class="mode-card" id="death404Card">
-                                <div class="mode-header">
-                                    <span class="mode-icon">404</span>
-                                    <div class="mode-info">
-                                        <span class="mode-title">Режим <span class="danger">Хардкор</span></span>
-                                    </div>
-                                    <button class="mode-toggle" id="death404Toggle">OFF</button>
-                                </div>
-                                <button class="modifiers-btn" id="modifiersTrigger">
-                                    Усложнения <span class="mod-count" id="modifiersCount">0</span>
-                                </button>
-                            </div>
+                    <h1 class="menu-title">
+                        Шесть Рукопожатий
+                        <span class="title-accent">Википедии</span>
+                    </h1>
+                    <p class="menu-desc">
+                        Найди путь от главной страницы Wikipedia до случайной статьи
+                    </p>
 
-                            <!-- Кнопки -->
-                            <div class="menu-buttons">
-                                <button id="btnSinglePlayer" class="btn-play btn-solo">
-                                    <span class="btn-pattern"></span>
-                                    <span class="btn-icon-main">🎮</span>
-                                    <span class="btn-text">Одиночная игра</span>
-                                </button>
+                    <!-- Профиль -->
+                    <div class="player-card">
+                        <div class="player-avatar" id="userAvatar" onclick="toggleColorPicker()">?</div>
+                        <input type="text" id="playerName" class="player-name-input" placeholder="Ваш ник"
+                            maxlength="20">
+                    </div>
 
-                                <div class="btn-row">
-                                    <button id="btnCreateRoom" class="btn-play btn-create">
-                                        <span class="btn-pattern"></span>
-                                        <span class="btn-icon-main">➕</span>
-                                        <span class="btn-text">Создать</span>
-                                    </button>
-                                    <button id="btnJoinRoom" class="btn-play btn-join">
-                                        <span class="btn-pattern"></span>
-                                        <span class="btn-icon-main">🚪</span>
-                                        <span class="btn-text">Войти</span>
-                                    </button>
-                                </div>
-
-                                <button class="btn-how" id="btnHowToPlay">
-                                    <span class="btn-pattern"></span>
-                                    <span class="btn-icon-main">❓</span>
-                                    <span class="btn-text">Как играть</span>
-                                </button>
+                    <!-- Режим 404 -->
+                    <div class="mode-card" id="death404Card">
+                        <div class="mode-header">
+                            <span class="mode-icon">404</span>
+                            <div class="mode-info">
+                                <span class="mode-title">Режим <span class="danger">Хардкор</span></span>
                             </div>
+                            <button class="mode-toggle" id="death404Toggle">OFF</button>
+                        </div>
+                        <button class="modifiers-btn" id="modifiersTrigger">
+                            Усложнения <span class="mod-count" id="modifiersCount">0</span>
+                        </button>
+                    </div>
+
+                    <!-- Кнопки -->
+                    <div class="menu-buttons">
+                        <button id="btnSinglePlayer" class="btn-play btn-solo">
+                            <span class="btn-pattern"></span>
+                            <span class="btn-icon-main">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="2" y="6" width="20" height="12" rx="2" />
+                                    <path d="M6 12h4M8 10v4" />
+                                    <circle cx="17" cy="10" r="1" />
+                                    <circle cx="15" cy="12" r="1" />
+                                </svg>
+                            </span>
+                            <span class="btn-text">Одиночная игра</span>
+                        </button>
+
+                        <div class="btn-row">
+                            <button id="btnCreateRoom" class="btn-play btn-create">
+                                <span class="btn-pattern"></span>
+                                <span class="btn-icon-main">
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="12" y1="5" x2="12" y2="19" />
+                                        <line x1="5" y1="12" x2="19" y2="12" />
+                                    </svg>
+                                </span>
+                                <span class="btn-text">Создать</span>
+                            </button>
+                            <button id="btnJoinRoom" class="btn-play btn-join">
+                                <span class="btn-pattern"></span>
+                                <span class="btn-icon-main">
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                                        <polyline points="10 17 15 12 10 7" />
+                                        <line x1="15" y1="12" x2="3" y2="12" />
+                                    </svg>
+                                </span>
+                                <span class="btn-text">Войти</span>
+                            </button>
                         </div>
 
-                        <!-- Правая колонка - профиль -->
-                        <div class="menu-right">
-                            <div class="profile-card">
-                                <!-- Аватарка -->
-                                <div class="profile-avatar-wrap" onclick="toggleColorPicker()">
-                                    <div class="profile-avatar" id="userAvatar">?</div>
-                                    <div class="profile-xp-ring">
-                                        <svg viewBox="0 0 100 100">
-                                            <circle class="ring-bg" cx="50" cy="50" r="46"/>
-                                            <circle class="ring-fill" id="xpRingFill" cx="50" cy="50" r="46"/>
-                                        </svg>
-                                    </div>
-                                    <div class="profile-level" id="profileLevel">1</div>
-                                </div>
-                                
-                                <!-- XP под рамкой -->
-                                <div class="profile-xp">
-                                    <span class="xp-text" id="profileXPText">0/100 XP</span>
-                                </div>
-                                
-                                <!-- Ник -->
-                                <input type="text" id="playerName" class="profile-nick" placeholder="Ваш ник" maxlength="20">
-                                
-                                <!-- Титул -->
-                                <div class="profile-title" id="profileTitle"></div>
-                                
-                                <!-- Значки -->
-                                <div class="profile-badges" id="profileBadges"></div>
-                                
-                                <!-- Статистика -->
-                                <div class="profile-stats">
-                                    <div class="profile-stat">
-                                        <span class="stat-label">Побед</span>
-                                        <span class="stat-value" id="profileWins">0</span>
-                                    </div>
-                                    <div class="profile-stat">
-                                        <span class="stat-label">Игр</span>
-                                        <span class="stat-value" id="profileGames">0</span>
-                                    </div>
-                                </div>
-
-                                <!-- Кнопка авторизации -->
-                                <button class="btn-auth-card" id="btnAuthMain" onclick="showAuthModal()">
-                                    Войти в аккаунт
-                                </button>
-                            </div>
-                        </div>
+                        <button class="btn-how" id="btnHowToPlay">
+                            <span class="btn-pattern"></span>
+                            <span class="btn-icon-main">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+                                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                                </svg>
+                            </span>
+                            <span class="btn-text">Как играть</span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -150,10 +202,9 @@
 
                     <div class="room-main">
                         <!-- Код комнаты -->
-                        <div class="room-code-card">
+                        <div class="room-code-card" onclick="copyRoomCodePanel()">
                             <span class="room-code-label">Код комнаты</span>
-                            <span class="room-code-value" id="roomCodeDisplay"
-                                onclick="copyRoomCodePanel()">------</span>
+                            <span class="room-code-value" id="roomCodeDisplay">------</span>
                             <span class="room-code-hint">Нажмите чтобы скопировать</span>
                         </div>
 
@@ -181,34 +232,29 @@
                             <div class="players-list" id="playersListPanel"></div>
                         </div>
 
-                        <!-- Селектор макс игроков (колёсико) -->
-                        <div class="max-players-popup" id="maxPlayersPopup">
-                            <div class="max-players-title">Максимум игроков</div>
-                            <div class="number-wheel-container">
-                                <button class="wheel-arrow wheel-up" id="wheelUp">▲</button>
-                                <div class="number-wheel" id="numberWheel">
-                                    <div class="wheel-numbers" id="wheelNumbers">
-                                        <div class="wheel-num" data-value="2">2</div>
-                                        <div class="wheel-num" data-value="3">3</div>
-                                        <div class="wheel-num" data-value="4">4</div>
-                                        <div class="wheel-num" data-value="5">5</div>
-                                        <div class="wheel-num" data-value="6">6</div>
-                                        <div class="wheel-num" data-value="7">7</div>
-                                        <div class="wheel-num active" data-value="8">8</div>
-                                        <div class="wheel-num" data-value="9">9</div>
-                                        <div class="wheel-num" data-value="10">10</div>
-                                        <div class="wheel-num" data-value="11">11</div>
-                                        <div class="wheel-num" data-value="12">12</div>
-                                        <div class="wheel-num" data-value="13">13</div>
-                                        <div class="wheel-num" data-value="14">14</div>
-                                        <div class="wheel-num" data-value="15">15</div>
-                                        <div class="wheel-num" data-value="16">16</div>
-                                    </div>
-                                    <div class="wheel-highlight"></div>
+                        <!-- Селектор макс игроков (popup) -->
+                        <div class="max-players-overlay" id="maxPlayersPopup">
+                            <div class="max-players-modal">
+                                <button class="max-players-close" onclick="hideMaxPlayersPopup()">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="18" y1="6" x2="6" y2="18" />
+                                        <line x1="6" y1="6" x2="18" y2="18" />
+                                    </svg>
+                                </button>
+                                <div class="max-players-header">
+                                    <div class="max-players-title">Максимум игроков</div>
                                 </div>
-                                <button class="wheel-arrow wheel-down" id="wheelDown">▼</button>
+                                <div class="max-players-grid" id="maxPlayersGrid">
+                                    <button class="max-players-btn" data-value="2">2</button>
+                                    <button class="max-players-btn" data-value="3">3</button>
+                                    <button class="max-players-btn" data-value="4">4</button>
+                                    <button class="max-players-btn" data-value="5">5</button>
+                                    <button class="max-players-btn" data-value="6">6</button>
+                                    <button class="max-players-btn" data-value="8">8</button>
+                                    <button class="max-players-btn" data-value="10">10</button>
+                                    <button class="max-players-btn" data-value="12">12</button>
+                                </div>
                             </div>
-                            <button class="max-players-confirm" id="maxPlayersConfirm">Применить</button>
                         </div>
 
                         <!-- Статус готовности -->
@@ -244,9 +290,10 @@
                     <div class="join-card">
                         <h2>Войти в комнату</h2>
                         <p>Введите код комнаты</p>
-                        <input type="text" id="roomCodeInput" class="code-input" placeholder="XXXXXX" maxlength="6">
+                        <div class="code-input-wrapper">
+                            <input type="text" id="roomCodeInput" class="code-input" placeholder="XXXXXX" maxlength="6">
+                        </div>
                         <button id="btnJoinConfirm" class="btn-action btn-join-confirm">
-                            <span class="btn-icon">→</span>
                             <span class="btn-label">Присоединиться</span>
                         </button>
                     </div>
@@ -255,23 +302,91 @@
         </div>
     </div>
 
-    <!-- Popup настройки цвета -->
-    <div class="color-picker-popup" id="colorPickerPopup">
-        <div class="picker-header">
-            <span>🎨 Цвет аватара</span>
-            <button class="picker-close" onclick="toggleColorPicker()">✕</button>
-        </div>
-        <div class="picker-content">
-            <div class="color-wheel-wrap">
-                <canvas id="colorWheel" width="150" height="150"></canvas>
+    <!-- Popup настройки аватара -->
+    <div class="avatar-settings-popup" id="colorPickerPopup">
+        <div class="avatar-popup-header">
+            <div class="avatar-popup-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="8" r="4" />
+                    <path d="M4 20c0-4 4-6 8-6s8 2 8 6" />
+                </svg>
+                <span>Настройка аватара</span>
             </div>
-            <div class="color-presets">
-                <div class="preset" style="background:#e74c3c" onclick="selectPresetColor('#e74c3c')"></div>
-                <div class="preset" style="background:#e67e22" onclick="selectPresetColor('#e67e22')"></div>
-                <div class="preset" style="background:#f1c40f" onclick="selectPresetColor('#f1c40f')"></div>
-                <div class="preset" style="background:#2ecc71" onclick="selectPresetColor('#2ecc71')"></div>
-                <div class="preset" style="background:#3498db" onclick="selectPresetColor('#3498db')"></div>
-                <div class="preset" style="background:#9b59b6" onclick="selectPresetColor('#9b59b6')"></div>
+            <button class="avatar-popup-close" onclick="toggleColorPicker()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+            </button>
+        </div>
+
+        <div class="avatar-popup-content">
+            <!-- Превью аватара -->
+            <div class="avatar-preview-section">
+                <div class="avatar-preview-large" id="avatarPreview">?</div>
+                <span class="avatar-preview-hint">Предпросмотр</span>
+            </div>
+
+            <!-- Вкладки -->
+            <div class="avatar-tabs">
+                <button class="avatar-tab active" data-tab="color">Цвет</button>
+                <button class="avatar-tab" data-tab="image">Картинка</button>
+            </div>
+
+            <!-- Вкладка цвета -->
+            <div class="avatar-tab-content active" id="tabColor">
+                <div class="color-wheel-section">
+                    <canvas id="colorWheel" width="140" height="140"></canvas>
+                </div>
+                <div class="color-presets-section">
+                    <span class="presets-label">Быстрый выбор</span>
+                    <div class="color-presets-grid">
+                        <div class="color-preset" style="background:#e74c3c" onclick="selectPresetColor('#e74c3c')">
+                        </div>
+                        <div class="color-preset" style="background:#e67e22" onclick="selectPresetColor('#e67e22')">
+                        </div>
+                        <div class="color-preset" style="background:#f1c40f" onclick="selectPresetColor('#f1c40f')">
+                        </div>
+                        <div class="color-preset" style="background:#2ecc71" onclick="selectPresetColor('#2ecc71')">
+                        </div>
+                        <div class="color-preset" style="background:#3498db" onclick="selectPresetColor('#3498db')">
+                        </div>
+                        <div class="color-preset" style="background:#9b59b6" onclick="selectPresetColor('#9b59b6')">
+                        </div>
+                        <div class="color-preset" style="background:#1abc9c" onclick="selectPresetColor('#1abc9c')">
+                        </div>
+                        <div class="color-preset" style="background:#e91e63" onclick="selectPresetColor('#e91e63')">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Вкладка картинки -->
+            <div class="avatar-tab-content" id="tabImage">
+                <div class="avatar-url-section">
+                    <label class="avatar-url-label">Ссылка на изображение</label>
+                    <div class="avatar-url-input-wrap">
+                        <input type="text" id="avatarUrlInput" class="avatar-url-input"
+                            placeholder="https://example.com/avatar.png">
+                        <button class="avatar-url-apply" onclick="applyAvatarUrl()">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                        </button>
+                    </div>
+                    <span class="avatar-url-hint">Вставьте прямую ссылку на картинку (PNG, JPG, GIF)</span>
+                </div>
+                <div class="avatar-url-actions">
+                    <button class="avatar-clear-btn" onclick="clearAvatarImage()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        </svg>
+                        Сбросить картинку
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -401,149 +516,113 @@
         </div>
     </div>
 
+    <!-- Модальное окно "Как играть" (переработано) -->
     <!-- Модальное окно "Как играть" -->
     <div class="modal-overlay" id="howToPlayModal">
         <div class="modal-box help-modal">
             <div class="modal-head">
-                <h2>📖 Как играть</h2>
+                <h2>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                        <line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                    Как играть
+                </h2>
                 <button class="modal-x" id="howToPlayModalClose">×</button>
             </div>
             <div class="modal-content help-content">
-                <!-- Навигация -->
-                <div class="help-nav">
-                    <div class="help-tab active" data-topic="basics">
-                        <span class="help-tab-icon">🎮</span>
-                        <span class="help-tab-text">Основы</span>
+                <div class="help-sidebar">
+                    <div class="help-topic-item active" data-topic="basics">
+                        <span class="topic-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                            </svg>
+                        </span>
+                        <span class="topic-name">Основы</span>
                     </div>
-                    <div class="help-tab" data-topic="multiplayer">
-                        <span class="help-tab-icon">👥</span>
-                        <span class="help-tab-text">Мультиплеер</span>
+                    <div class="help-topic-item" data-topic="multiplayer">
+                        <span class="topic-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                <circle cx="9" cy="7" r="4"/>
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                            </svg>
+                        </span>
+                        <span class="topic-name">Мультиплеер</span>
                     </div>
-                    <div class="help-tab" data-topic="mode404">
-                        <span class="help-tab-icon">💀</span>
-                        <span class="help-tab-text">Режим 404</span>
+                    <div class="help-topic-item" data-topic="mode404">
+                        <span class="topic-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                                <line x1="12" y1="9" x2="12" y2="13"/>
+                                <line x1="12" y1="17" x2="12.01" y2="17"/>
+                            </svg>
+                        </span>
+                        <span class="topic-name">Режим 404</span>
                     </div>
-                    <div class="help-tab" data-topic="tips">
-                        <span class="help-tab-icon">💡</span>
-                        <span class="help-tab-text">Советы</span>
+                    <div class="help-topic-item" data-topic="tips">
+                        <span class="topic-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="9" y1="18" x2="15" y2="18"/>
+                                <line x1="10" y1="22" x2="14" y2="22"/>
+                                <path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/>
+                            </svg>
+                        </span>
+                        <span class="topic-name">Советы</span>
                     </div>
                 </div>
-
-                <!-- Контент -->
                 <div class="help-body" id="helpContent">
-                    <div class="help-page" data-topic="basics">
-                        <div class="help-page-header">
-                            <span class="help-page-icon">🎮</span>
-                            <h3>Основы игры</h3>
-                        </div>
-                        <div class="help-card">
-                            <div class="help-card-icon">🌐</div>
-                            <div class="help-card-content">
-                                <div class="help-card-title">Теория 6 рукопожатий</div>
-                                <p>Любые две статьи Википедии связаны цепочкой ссылок длиной не более 6 переходов.</p>
-                            </div>
-                        </div>
-                        <div class="help-card">
-                            <div class="help-card-icon">🎯</div>
-                            <div class="help-card-content">
-                                <div class="help-card-title">Цель игры</div>
-                                <p>Найти путь от главной страницы Википедии до целевой статьи, переходя только по
-                                    ссылкам.</p>
-                            </div>
-                        </div>
-                        <div class="help-card">
-                            <div class="help-card-icon">🏆</div>
-                            <div class="help-card-content">
-                                <div class="help-card-title">Победа</div>
-                                <p>Кто быстрее найдёт целевую статью — тот и победил!</p>
-                            </div>
-                        </div>
+                    <div class="help-page active" data-topic="basics">
+                        <h3>Основы игры</h3>
+                        <p>Это игра-гонка на скорость, основанная на идее "шести рукопожатий". Вам нужно как можно
+                            быстрее добраться от стартовой до целевой статьи в Википедии, переходя только по внутренним
+                            ссылкам.</p>
+                        <ul>
+                            <li><b>Старт:</b> Всегда главная страница Wikipedia (если не включены модификаторы).</li>
+                            <li><b>Цель:</b> Случайная или выбранная статья. Название цели видно вверху экрана.</li>
+                            <li><b>Переходы:</b> Нажимайте на любые синие ссылки в теле статьи, чтобы перемещаться.</li>
+                            <li><b>Победа:</b> Когда вы окажетесь на странице, название которой совпадает с целевой,
+                                нажмите кнопку <strong>"Нашёл!"</strong>. Побеждает самый быстрый!</li>
+                        </ul>
                     </div>
-
-                    <div class="help-page hidden" data-topic="multiplayer">
-                        <div class="help-page-header">
-                            <span class="help-page-icon">👥</span>
-                            <h3>Мультиплеер</h3>
-                        </div>
-                        <div class="help-card">
-                            <div class="help-card-icon">➕</div>
-                            <div class="help-card-content">
-                                <div class="help-card-title">Создать комнату</div>
-                                <p>Нажмите "Создать" и поделитесь 6-значным кодом с друзьями.</p>
-                            </div>
-                        </div>
-                        <div class="help-card">
-                            <div class="help-card-icon">🚪</div>
-                            <div class="help-card-content">
-                                <div class="help-card-title">Войти в комнату</div>
-                                <p>Введите код комнаты и присоединяйтесь к игре.</p>
-                            </div>
-                        </div>
-                        <div class="help-card">
-                            <div class="help-card-icon">✓</div>
-                            <div class="help-card-content">
-                                <div class="help-card-title">Готовность</div>
-                                <p>Все игроки должны нажать "Готов" перед началом игры.</p>
-                            </div>
-                        </div>
+                    <div class="help-page" data-topic="multiplayer">
+                        <h3>Мультиплеер</h3>
+                        <p>Соревнуйтесь с друзьями в реальном времени! Кто первый доберется до цели?</p>
+                        <ul>
+                            <li><b>Создать комнату:</b> Нажмите "Создать", и вы получите уникальный код. Поделитесь им с
+                                друзьями, чтобы они могли присоединиться.</li>
+                            <li><b>Войти в комнату:</b> Нажмите "Войти" и введите код комнаты, который вам прислал друг.
+                            </li>
+                            <li><b>Лобби:</b> В комнате вы увидите список игроков. Хост может настраивать игру. Когда
+                                все будут готовы (нажмут кнопку "Готов"), хост сможет начать игру.</li>
+                        </ul>
                     </div>
-
-                    <div class="help-page hidden" data-topic="mode404">
-                        <div class="help-page-header">
-                            <span class="help-page-icon">💀</span>
-                            <h3>Режим 404</h3>
-                        </div>
-                        <div class="help-card danger">
-                            <div class="help-card-icon">⚠️</div>
-                            <div class="help-card-content">
-                                <div class="help-card-title">Хардкор режим</div>
-                                <p>Включает дополнительные усложнения для настоящих профи!</p>
-                            </div>
-                        </div>
-                        <div class="help-card">
-                            <div class="help-card-icon">🎲</div>
-                            <div class="help-card-content">
-                                <div class="help-card-title">Случайный старт</div>
-                                <p>Начинаете не с главной, а со случайной статьи.</p>
-                            </div>
-                        </div>
-                        <div class="help-card">
-                            <div class="help-card-icon">🌀</div>
-                            <div class="help-card-content">
-                                <div class="help-card-title">Телепорт</div>
-                                <p>Каждые 15 секунд вас переносит на случайную страницу.</p>
-                            </div>
-                        </div>
-                        <div class="help-card">
-                            <div class="help-card-icon">⏱️</div>
-                            <div class="help-card-content">
-                                <div class="help-card-title">Лимит времени</div>
-                                <p>Ограниченное время на поиск цели.</p>
-                            </div>
-                        </div>
+                    <div class="help-page" data-topic="mode404">
+                        <h3>Режим 404 (Хардкор)</h3>
+                        <p>Для тех, кто ищет настоящий вызов! В этом режиме можно включить различные усложнения, которые
+                            кардинально меняют игру.</p>
+                        <ul>
+                            <li><b>Случайный старт:</b> Вы начинаете не с главной страницы, а со случайной статьи.</li>
+                            <li><b>Телепорт:</b> Каждые 15 секунд вас перебрасывает на случайную статью, связанную с
+                                текущей.</li>
+                            <li><b>Скрытая цель:</b> Вы не знаете название целевой статьи. Ориентируйтесь по краткому
+                                описанию-подсказке.</li>
+                        </ul>
                     </div>
-
-                    <div class="help-page hidden" data-topic="tips">
-                        <div class="help-page-header">
-                            <span class="help-page-icon">💡</span>
-                            <h3>Советы</h3>
-                        </div>
-                        <div class="help-tip">
-                            <span class="tip-number">1</span>
-                            <p>Используйте общие категории (страны, годы, науки) как промежуточные точки.</p>
-                        </div>
-                        <div class="help-tip">
-                            <span class="tip-number">2</span>
-                            <p>Читайте первый абзац статьи — там обычно самые полезные ссылки.</p>
-                        </div>
-                        <div class="help-tip">
-                            <span class="tip-number">3</span>
-                            <p>Статьи о странах и городах связаны почти со всем.</p>
-                        </div>
-                        <div class="help-tip">
-                            <span class="tip-number">4</span>
-                            <p>Нажмите <kbd>ESC</kbd> чтобы закрыть любое окно.</p>
-                        </div>
+                    <div class="help-page" data-topic="tips">
+                        <h3>Полезные советы</h3>
+                        <p>Несколько стратегий, которые помогут вам побеждать чаще:</p>
+                        <ul>
+                            <li><b>Ищите "широкие" статьи:</b> Страны, крупные города, общие понятия содержат множество ссылок и могут служить "хабами".</li>
+                            <li><b>Используйте категории:</b> Внизу каждой статьи есть категории. Они помогают быстро
+                                найти связанные темы.</li>
+                            <li><b>Читайте первый абзац:</b> Обычно в нем содержатся самые важные и общие ссылки.</li>
+                            <li><b>Горячие клавиши:</b> Используйте <kbd>ESC</kbd>, чтобы быстро закрыть любое модальное
+                                окно.</li>
+                        </ul>
                     </div>
                 </div>
             </div>
@@ -571,9 +650,7 @@
             <div class="game-header-center">
                 <div class="target-badge">
                     <span class="target-label">ЦЕЛЬ</span>
-                    <div class="target-name-wrapper">
-                        <span class="target-name" id="targetTitle">Загрузка...</span>
-                    </div>
+                    <span class="target-name" id="targetTitle">Загрузка...</span>
                 </div>
             </div>
             <div class="game-header-right">
@@ -600,8 +677,6 @@
             </div>
         </div>
     </div>
-
-
 
     <!-- Результаты -->
     <div id="results" class="screen">
@@ -648,24 +723,15 @@
             </div>
 
             <div id="multiplayerResults" class="multiplayer-section hidden">
-                <!-- Таблица лидеров -->
-                <div class="leaderboard-section" id="leaderboardSection">
-                    <div class="leaderboard-header">
-                        <span class="leaderboard-icon">🏆</span>
-                        <span class="leaderboard-title">Таблица лидеров</span>
-                    </div>
-                    <div class="leaderboard-list" id="leaderboardList"></div>
-                </div>
-
+                <div id="resultsTable" class="players-results"></div>
                 <div id="readySystem" class="ready-section">
-                    <h4>Готовность к следующей игре</h4>
-                    <div id="readyPlayersList"></div>
+                    <div class="ready-section-title">Готовность к следующей игре</div>
+                    <div id="readyPlayersList" class="players-list"></div>
                 </div>
             </div>
 
             <div class="results-actions">
                 <button id="btnPlayAgain" class="btn-action btn-play-again">
-                    <span class="btn-icon">🔄</span>
                     <span class="btn-label">Играть снова</span>
                 </button>
                 <button id="btnReady" class="btn-action btn-ready-result hidden">
@@ -673,70 +739,74 @@
                     <span class="btn-label">Готов</span>
                 </button>
                 <button id="btnBackToLobby" class="btn-action btn-to-menu">
-                    <span class="btn-icon">←</span>
                     <span class="btn-label">В главное меню</span>
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Футер -->
-    <footer class="site-footer" id="siteFooter">
-        <span>Сделано</span>
-        <a href="https://github.com/bibagi" target="_blank" rel="noopener">iuwfe</a>
-        <span>в 2025 году</span>
-    </footer>
-
-    <!-- Модалка авторизации -->
-    <div class="auth-modal" id="authModal">
-        <div class="auth-modal-content">
-            <button class="auth-close" onclick="hideAuthModal()">&times;</button>
-
-            <div class="auth-tabs">
-                <button class="auth-tab active" data-tab="login" onclick="switchAuthTab('login')">Вход</button>
-                <button class="auth-tab" data-tab="register" onclick="switchAuthTab('register')">Регистрация</button>
+    <!-- Settings Panel -->
+    <div class="settings-panel" id="settingsPanel">
+        <button class="settings-toggle-btn" id="settingsToggle" title="Настройки">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path
+                    d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+                <circle cx="12" cy="12" r="3" />
+            </svg>
+        </button>
+        <div class="settings-menu" id="settingsMenu">
+            <div class="settings-item" id="streamerModeToggle">
+                <div class="settings-item-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path
+                            d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z" />
+                    </svg>
+                </div>
+                <span class="settings-item-label">Режим стримера</span>
+                <div class="settings-item-toggle">
+                    <span class="toggle-slider"></span>
+                </div>
             </div>
 
-            <!-- Форма входа -->
-            <form class="auth-form" id="loginForm" onsubmit="handleLogin(event)">
-                <div class="auth-field">
-                    <label>Логин</label>
-                    <input type="text" id="loginUsername" placeholder="Ваш логин" required>
-                </div>
-                <div class="auth-field">
-                    <label>Пароль</label>
-                    <input type="password" id="loginPassword" placeholder="Пароль" required>
-                </div>
-                <div class="auth-error" id="loginError"></div>
-                <button type="submit" class="auth-submit">Войти</button>
-            </form>
+            <div class="theme-selector">
+                <div class="theme-selector-title">Тема оформления</div>
 
-            <!-- Форма регистрации -->
-            <form class="auth-form hidden" id="registerForm" onsubmit="handleRegister(event)">
-                <div class="auth-field">
-                    <label>Логин</label>
-                    <input type="text" id="regUsername" placeholder="Придумайте логин" minlength="3" maxlength="20"
-                        required>
+                <div class="theme-option active" data-theme="default" id="themeDefault">
+                    <div class="theme-option-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="5" />
+                            <path
+                                d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+                        </svg>
+                    </div>
+                    <div class="theme-option-info">
+                        <div class="theme-option-name">Классическая</div>
+                        <div class="theme-option-desc">Тёплые оранжевые тона</div>
+                    </div>
+                    <div class="theme-option-check">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                            <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                    </div>
                 </div>
-                <div class="auth-field">
-                    <label>Отображаемое имя</label>
-                    <input type="text" id="regDisplayName" placeholder="Как вас называть в игре" maxlength="20">
-                </div>
-                <div class="auth-field">
-                    <label>Пароль</label>
-                    <input type="password" id="regPassword" placeholder="Минимум 4 символа" minlength="4" required>
-                </div>
-                <div class="auth-field">
-                    <label>Повторите пароль</label>
-                    <input type="password" id="regPasswordConfirm" placeholder="Ещё раз пароль" required>
-                </div>
-                <div class="auth-error" id="registerError"></div>
-                <button type="submit" class="auth-submit">Зарегистрироваться</button>
-            </form>
 
-            <div class="auth-guest">
-                <span>или</span>
-                <button class="auth-guest-btn" onclick="playAsGuest()">Играть как гость</button>
+                <div class="theme-option" data-theme="newyear" id="themeNewYear">
+                    <div class="theme-option-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2L9 9H2l6 5-2 8 6-4 6 4-2-8 6-5h-7z" />
+                        </svg>
+                    </div>
+                    <div class="theme-option-info">
+                        <div class="theme-option-name">Новогодняя 2026</div>
+                        <div class="theme-option-desc">Снежинки, гирлянды и праздник</div>
+                    </div>
+                    <div class="theme-option-check">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                            <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

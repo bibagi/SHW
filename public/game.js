@@ -12,6 +12,7 @@ let gameState = {
     ws: null,
     players: [],
     death404Mode: false,
+    streamerMode: false,
     modifiers: {
         randomStart: false,
         teleport: false,
@@ -29,653 +30,39 @@ let gameState = {
     isGuest: true
 };
 
-// ========== СИСТЕМА АВТОРИЗАЦИИ ==========
-
-// Получить токен из localStorage
-function getAuthToken() {
-    return localStorage.getItem('authToken');
-}
-
-// Сохранить токен
-function setAuthToken(token) {
-    if (token) {
-        localStorage.setItem('authToken', token);
-        gameState.authToken = token;
-    } else {
-        localStorage.removeItem('authToken');
-        gameState.authToken = null;
-    }
-}
-
-// API запрос с авторизацией
-async function apiRequest(endpoint, options = {}) {
-    const token = getAuthToken();
-    const headers = {
-        'Content-Type': 'application/json',
-        ...(token && { 'Authorization': `Bearer ${token}` })
-    };
-    
-    const response = await fetch(endpoint, {
-        ...options,
-        headers: { ...headers, ...options.headers }
-    });
-    
-    return response.json();
-}
-
-// Проверить авторизацию при загрузке
-async function checkAuth() {
-    const token = getAuthToken();
-    if (!token) {
-        setGuestMode();
-        return;
-    }
-    
-    try {
-        const data = await apiRequest('/api/me');
-        if (data.user) {
-            setLoggedInUser(data.user);
-        } else {
-            setAuthToken(null);
-            setGuestMode();
-        }
-    } catch (e) {
-        console.error('Auth check failed:', e);
-        setGuestMode();
-    }
-}
-
-// Установить режим гостя
-function setGuestMode() {
-    gameState.isGuest = true;
-    gameState.currentUser = null;
-    updateAuthUI();
-}
-
-// Установить авторизованного пользователя
-function setLoggedInUser(user) {
-    gameState.isGuest = false;
-    gameState.currentUser = user;
-    gameState.playerName = user.display_name;
-    
-    // Обновить UI
-    const playerNameInput = document.getElementById('playerName');
-    if (playerNameInput) {
-        playerNameInput.value = user.display_name;
-        playerNameInput.disabled = true; // Нельзя менять имя если залогинен
-    }
-    
-    // Загрузить профиль из БД
-    loadProfileFromServer(user);
-    updateAuthUI();
-}
-
-// Загрузить профиль с сервера
-function loadProfileFromServer(user) {
-    const profile = {
-        xp: user.xp || 0,
-        level: user.level || 1,
-        totalGames: user.total_games || 0,
-        wins: user.wins || 0,
-        losses: user.losses || 0,
-        soloGames: user.solo_games || 0,
-        multiGames: user.multi_games || 0,
-        bestTime: user.best_time,
-        totalClicks: user.total_clicks || 0,
-        streak: user.streak || 0,
-        maxStreak: user.max_streak || 0,
-        title: user.title || null,   // { name, color }
-        badges: user.badges || []    // [{ id, name, desc, icon, size }]
-    };
-    
-    // Сохраняем локально для быстрого доступа
-    localStorage.setItem('wikiRaceProfile', JSON.stringify(profile));
-    
-    if (user.color) {
-        localStorage.setItem('userColor', user.color);
-    }
-    
-    updateProfileDisplay();
-    updateProfileAvatar();
-}
-
-// Обновить UI авторизации
-function updateAuthUI() {
-    const playerNameInput = document.getElementById('playerName');
-    const btnAuthMain = document.getElementById('btnAuthMain');
-    
-    if (gameState.isGuest) {
-        // Гость - показать кнопку входа
-        if (playerNameInput) playerNameInput.disabled = false;
-        if (btnAuthMain) {
-            btnAuthMain.classList.remove('hidden', 'logout');
-            btnAuthMain.onclick = showAuthModal;
-            btnAuthMain.textContent = 'Войти в аккаунт';
-        }
-    } else {
-        // Залогинен - заменить на кнопку выхода
-        if (playerNameInput) playerNameInput.disabled = true;
-        if (btnAuthMain) {
-            btnAuthMain.classList.remove('hidden');
-            btnAuthMain.classList.add('logout');
-            btnAuthMain.onclick = logout;
-            btnAuthMain.textContent = `Выйти из аккаунта`;
-        }
-    }
-}
-
-// Показать модалку авторизации
-function showAuthModal() {
-    const modal = document.getElementById('authModal');
-    if (modal) modal.classList.add('show');
-}
-
-// Скрыть модалку
-function hideAuthModal() {
-    const modal = document.getElementById('authModal');
-    if (modal) modal.classList.remove('show');
-    
-    // Очистить ошибки
-    document.getElementById('loginError').textContent = '';
-    document.getElementById('registerError').textContent = '';
-}
-
-// Переключить таб
-function switchAuthTab(tab) {
-    document.querySelectorAll('.auth-tab').forEach(t => {
-        t.classList.toggle('active', t.dataset.tab === tab);
-    });
-    
-    document.getElementById('loginForm').classList.toggle('hidden', tab !== 'login');
-    document.getElementById('registerForm').classList.toggle('hidden', tab !== 'register');
-}
-
-// Обработка входа
-async function handleLogin(e) {
-    e.preventDefault();
-    
-    const username = document.getElementById('loginUsername').value;
-    const password = document.getElementById('loginPassword').value;
-    const errorEl = document.getElementById('loginError');
-    const submitBtn = e.target.querySelector('button[type="submit"]');
-    
-    submitBtn.disabled = true;
-    errorEl.textContent = '';
-    
-    try {
-        const data = await apiRequest('/api/login', {
-            method: 'POST',
-            body: JSON.stringify({ username, password })
-        });
-        
-        if (data.error) {
-            errorEl.textContent = data.error;
-        } else {
-            setAuthToken(data.token);
-            setLoggedInUser(data.user);
-            hideAuthModal();
-        }
-    } catch (e) {
-        errorEl.textContent = 'Ошибка соединения';
-    }
-    
-    submitBtn.disabled = false;
-}
-
-// Обработка регистрации
-async function handleRegister(e) {
-    e.preventDefault();
-    
-    const username = document.getElementById('regUsername').value;
-    const displayName = document.getElementById('regDisplayName').value;
-    const password = document.getElementById('regPassword').value;
-    const passwordConfirm = document.getElementById('regPasswordConfirm').value;
-    const errorEl = document.getElementById('registerError');
-    const submitBtn = e.target.querySelector('button[type="submit"]');
-    
-    if (password !== passwordConfirm) {
-        errorEl.textContent = 'Пароли не совпадают';
-        return;
-    }
-    
-    submitBtn.disabled = true;
-    errorEl.textContent = '';
-    
-    try {
-        const data = await apiRequest('/api/register', {
-            method: 'POST',
-            body: JSON.stringify({ username, password, displayName: displayName || username })
-        });
-        
-        if (data.error) {
-            errorEl.textContent = data.error;
-        } else {
-            setAuthToken(data.token);
-            setLoggedInUser(data.user);
-            hideAuthModal();
-        }
-    } catch (e) {
-        errorEl.textContent = 'Ошибка соединения';
-    }
-    
-    submitBtn.disabled = false;
-}
-
-// Играть как гость
-function playAsGuest() {
-    setGuestMode();
-    hideAuthModal();
-}
-
-// Выход
-async function logout() {
-    await apiRequest('/api/logout', { method: 'POST' });
-    setAuthToken(null);
-    setGuestMode();
-    
-    // Сбросить имя
-    const playerNameInput = document.getElementById('playerName');
-    if (playerNameInput) {
-        playerNameInput.value = '';
-        playerNameInput.disabled = false;
-    }
-    
-    // Сбросить локальный профиль
-    localStorage.removeItem('wikiRaceProfile');
-    updateProfileDisplay();
-}
-
-// ========== СИСТЕМА ТИТУЛОВ И ЗНАЧКОВ ==========
-// Титулы и значки загружаются из профиля пользователя (БД)
-// Формат титула в БД: { name: "Название", color: "#цвет" }
-// Формат значка в БД: { id: "id", name: "Название", desc: "Описание", icon: "url картинки", size: 32 }
-
-// Отрисовать титул
-function renderTitle(titleData) {
-    const titleEl = document.getElementById('profileTitle');
-    if (!titleEl) return;
-    
-    if (titleData && titleData.name) {
-        titleEl.textContent = titleData.name;
-        titleEl.style.color = titleData.color || 'var(--accent)';
-    } else {
-        titleEl.textContent = '';
-    }
-}
-
-// Отрисовать значки из БД
-function renderBadges(containerId, badges) {
-    const container = document.getElementById(containerId);
+// Toast notification system
+function showToast(type, title, message, duration = 4000) {
+    const container = document.getElementById('toastContainer');
     if (!container) return;
-    
-    if (!badges || badges.length === 0) {
-        container.innerHTML = '';
-        return;
-    }
-    
-    container.innerHTML = badges.map(badge => {
-        const size = badge.size || 32;
-        return `
-            <div class="badge" style="width: ${size}px; height: ${size}px;">
-                <img src="${badge.icon}" alt="${badge.name}" style="width: ${size - 8}px; height: ${size - 8}px;">
-                <div class="badge-tooltip">
-                    <div class="badge-tooltip-title">${badge.name}</div>
-                    <div class="badge-tooltip-desc">${badge.desc || ''}</div>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
 
-// Показать попап профиля игрока
-function showPlayerPopup(e) {
-    const item = e.currentTarget;
-    const playerData = JSON.parse(item.dataset.player || '{}');
-    
-    // Удалить старый попап
-    hidePlayerPopup();
-    
-    const level = playerData.level || 1;
-    const xp = playerData.xp || 0;
-    const xpForLevel = getXPForLevel(level);
-    const xpForNext = getXPForLevel(level + 1);
-    const xpProgress = xp - xpForLevel;
-    const xpNeeded = xpForNext - xpForLevel;
-    const progressPercent = Math.min(100, (xpProgress / xpNeeded) * 100);
-    const circumference = 339.292;
-    const offset = circumference - (progressPercent / 100) * circumference;
-    
-    // Титул из данных игрока
-    const title = playerData.title || null;
-    const titleHtml = title ? `<div class="popup-title" style="color: ${title.color || 'var(--accent)'}">${title.name}</div>` : '';
-    
-    const popup = document.createElement('div');
-    popup.className = 'player-popup';
-    popup.innerHTML = `
-        <div class="popup-profile-card">
-            <div class="popup-top">
-                <div class="popup-avatar-ring">
-                    <svg class="xp-ring" viewBox="0 0 120 120">
-                        <circle class="xp-ring-bg" cx="60" cy="60" r="54"/>
-                        <circle class="xp-ring-fill" cx="60" cy="60" r="54" style="stroke-dashoffset: ${offset}"/>
-                    </svg>
-                    <div class="popup-avatar" style="background: ${playerData.color || '#b45328'}">
-                        ${playerData.name?.charAt(0).toUpperCase() || '?'}
-                    </div>
-                    <div class="popup-level">${level}</div>
-                </div>
-                <div class="popup-info">
-                    <div class="popup-name">${playerData.name || 'Игрок'}</div>
-                    ${titleHtml}
-                    <div class="popup-xp">${xpProgress}/${xpNeeded} XP</div>
-                </div>
-            </div>
-            <div class="popup-stats">
-                <div class="popup-stat">
-                    <span class="popup-stat-value">${playerData.wins || 0}</span>
-                    <span class="popup-stat-label">Побед</span>
-                </div>
-                <div class="popup-stat">
-                    <span class="popup-stat-value">${playerData.score || 0}</span>
-                    <span class="popup-stat-label">Очков</span>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(popup);
-    
-    // Позиционирование
-    const rect = item.getBoundingClientRect();
-    popup.style.left = `${rect.right + 10}px`;
-    popup.style.top = `${rect.top}px`;
-    
-    // Проверить выход за границы
-    const popupRect = popup.getBoundingClientRect();
-    if (popupRect.right > window.innerWidth) {
-        popup.style.left = `${rect.left - popupRect.width - 10}px`;
-    }
-    
-    setTimeout(() => popup.classList.add('show'), 10);
-}
-
-// Скрыть попап
-function hidePlayerPopup() {
-    const popup = document.querySelector('.player-popup');
-    if (popup) popup.remove();
-}
-
-// ========== СИСТЕМА ПРОФИЛЕЙ И УРОВНЕЙ ==========
-
-// Формула опыта для уровня: сколько XP нужно чтобы ДОСТИЧЬ этого уровня
-// Уровень 1 = 0 XP, Уровень 2 = 100 XP, Уровень 3 = 300 XP, и т.д.
-function getXPForLevel(level) {
-    if (level <= 1) return 0;
-    return (level - 1) * (level - 1) * 100;
-}
-
-// Получить уровень по опыту
-function getLevelFromXP(xp) {
-    let level = 1;
-    while (getXPForLevel(level + 1) <= xp) {
-        level++;
-    }
-    return level;
-}
-
-// Профиль игрока по умолчанию
-function getDefaultProfile() {
-    return {
-        xp: 0,
-        level: 1,
-        totalGames: 0,
-        wins: 0,
-        losses: 0,
-        soloGames: 0,
-        multiGames: 0,
-        bestTime: null,
-        totalClicks: 0,
-        streak: 0,
-        maxStreak: 0
+    const icons = {
+        error: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+        success: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="9 12 12 15 16 10"/></svg>',
+        warning: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+        info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
     };
-}
 
-// Загрузить профиль
-function loadProfile() {
-    const saved = localStorage.getItem('wikiRaceProfile');
-    if (saved) {
-        return { ...getDefaultProfile(), ...JSON.parse(saved) };
-    }
-    return getDefaultProfile();
-}
-
-// Сохранить профиль
-function saveProfile(profile) {
-    localStorage.setItem('wikiRaceProfile', JSON.stringify(profile));
-    updateProfileDisplay();
-}
-
-// Рассчитать XP за одиночную игру
-function calculateSoloXP(timeSeconds, clicks) {
-    // Базовый XP: 50
-    // Бонус за скорость: до +100 XP (если меньше 60 сек)
-    // Штраф за время: -1 XP за каждые 10 сек после 2 минут
-    // Бонус за мало кликов: до +50 XP
-    
-    let xp = 50;
-    
-    // Бонус за скорость
-    if (timeSeconds < 60) {
-        xp += Math.floor((60 - timeSeconds) * 1.5);
-    } else if (timeSeconds < 120) {
-        xp += Math.floor((120 - timeSeconds) * 0.5);
-    } else {
-        // Штраф за долгую игру
-        xp -= Math.floor((timeSeconds - 120) / 10);
-    }
-    
-    // Бонус за мало кликов
-    if (clicks <= 3) {
-        xp += 50;
-    } else if (clicks <= 5) {
-        xp += 30;
-    } else if (clicks <= 10) {
-        xp += 10;
-    }
-    
-    return Math.max(10, xp); // Минимум 10 XP
-}
-
-// Рассчитать XP за мультиплеер
-function calculateMultiXP(isWinner, timeSeconds, playersCount) {
-    let xp = 30; // Базовый XP за участие
-    
-    if (isWinner) {
-        // Победа: базовый бонус + бонус за количество игроков
-        xp += 100 + (playersCount - 1) * 20;
-        
-        // Бонус за быструю победу
-        if (timeSeconds < 60) {
-            xp += 50;
-        } else if (timeSeconds < 120) {
-            xp += 25;
-        }
-    }
-    
-    return xp;
-}
-
-// Добавить XP и обновить профиль после игры
-function addGameResult(isSolo, isWinner, timeSeconds, clicks, playersCount = 1) {
-    const profile = loadProfile();
-    const oldLevel = profile.level;
-    
-    // Рассчитать XP
-    let xpGained;
-    if (isSolo) {
-        xpGained = calculateSoloXP(timeSeconds, clicks);
-        profile.soloGames++;
-        profile.wins++; // В соло всегда победа если дошёл
-    } else {
-        xpGained = calculateMultiXP(isWinner, timeSeconds, playersCount);
-        profile.multiGames++;
-        if (isWinner) {
-            profile.wins++;
-            profile.streak++;
-            profile.maxStreak = Math.max(profile.maxStreak, profile.streak);
-        } else {
-            profile.losses++;
-            profile.streak = 0;
-        }
-    }
-    
-    // Бонус за серию побед
-    if (profile.streak >= 3) {
-        xpGained = Math.floor(xpGained * 1.2);
-    }
-    if (profile.streak >= 5) {
-        xpGained = Math.floor(xpGained * 1.1);
-    }
-    
-    profile.xp += xpGained;
-    profile.totalGames++;
-    profile.totalClicks += clicks;
-    profile.level = getLevelFromXP(profile.xp);
-    
-    // Лучшее время
-    if (isWinner && (!profile.bestTime || timeSeconds < profile.bestTime)) {
-        profile.bestTime = timeSeconds;
-    }
-    
-    saveProfile(profile);
-    
-    // Если авторизован - сохранить на сервер
-    if (!gameState.isGuest && gameState.authToken) {
-        saveGameResultToServer(isSolo, isWinner, timeSeconds, clicks, xpGained);
-    }
-    
-    // Показать уведомление
-    const newLevel = profile.level;
-    showXPNotification(xpGained, newLevel > oldLevel ? newLevel : null);
-    
-    return { xpGained, levelUp: newLevel > oldLevel, newLevel };
-}
-
-// Сохранить результат на сервер
-async function saveGameResultToServer(isSolo, isWinner, timeSeconds, clicks, xpGained) {
-    try {
-        const data = await apiRequest('/api/game-result', {
-            method: 'POST',
-            body: JSON.stringify({
-                isSolo,
-                isWinner,
-                timeSeconds,
-                clicks,
-                xpGained,
-                targetArticle: gameState.targetArticle
-            })
-        });
-        
-        if (data.user) {
-            loadProfileFromServer(data.user);
-        }
-    } catch (e) {
-        console.error('Failed to save game result:', e);
-    }
-}
-
-// Показать уведомление о полученном XP
-function showXPNotification(xp, newLevel) {
-    const notification = document.createElement('div');
-    notification.className = 'xp-notification';
-    notification.innerHTML = `
-        <span class="xp-amount">+${xp} XP</span>
-        ${newLevel ? `<span class="level-up">🎉 Уровень ${newLevel}!</span>` : ''}
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.innerHTML = `
+        <div class="toast-icon">${icons[type]}</div>
+        <div class="toast-content">
+            <div class="toast-title">${title}</div>
+            <div class="toast-message">${message}</div>
+        </div>
+        <button class="toast-close" onclick="this.parentElement.remove()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+        </button>
     `;
-    document.body.appendChild(notification);
-    
-    setTimeout(() => notification.classList.add('show'), 10);
+
+    container.appendChild(toast);
+
     setTimeout(() => {
-        notification.classList.remove('show');
-        setTimeout(() => notification.remove(), 300);
-    }, 3000);
-}
-
-// Обновить отображение профиля
-function updateProfileDisplay() {
-    const profile = loadProfile();
-    const currentXP = profile.xp || 0;
-    
-    // Пересчитать уровень на основе XP (на случай если он не обновился)
-    const currentLevel = getLevelFromXP(currentXP);
-    
-    // Обновить уровень в профиле если он изменился
-    if (profile.level !== currentLevel) {
-        profile.level = currentLevel;
-        saveProfile(profile);
-    }
-    
-    const xpForCurrentLevel = getXPForLevel(currentLevel);
-    const xpForNextLevel = getXPForLevel(currentLevel + 1);
-    const xpProgress = currentXP - xpForCurrentLevel;
-    const xpNeeded = xpForNextLevel - xpForCurrentLevel;
-    const progressPercent = Math.min(100, (xpProgress / xpNeeded) * 100);
-    
-    // Обновить элементы UI
-    const levelEl = document.getElementById('profileLevel');
-    const xpRingEl = document.getElementById('xpRingFill');
-    const xpBarEl = document.getElementById('xpBarFill');
-    const xpTextEl = document.getElementById('profileXPText');
-    const winsEl = document.getElementById('profileWins');
-    const gamesEl = document.getElementById('profileGames');
-    const titleEl = document.getElementById('profileTitle');
-    
-    if (levelEl) levelEl.textContent = currentLevel;
-    
-    // Обновить SVG кольцо XP (окружность = 2 * PI * 54 = 339.292)
-    if (xpRingEl) {
-        const circumference = 339.292;
-        const offset = circumference - (progressPercent / 100) * circumference;
-        xpRingEl.style.strokeDashoffset = offset;
-    }
-    
-    // Обновить мини XP бар
-    if (xpBarEl) {
-        xpBarEl.style.width = `${progressPercent}%`;
-    }
-    
-    if (xpTextEl) xpTextEl.textContent = `${xpProgress}/${xpNeeded} XP`;
-    if (winsEl) winsEl.textContent = profile.wins;
-    if (gamesEl) gamesEl.textContent = profile.totalGames;
-    
-    // Обновить второй элемент уровня (в статистике)
-    const level2El = document.getElementById('profileLevel2');
-    if (level2El) level2El.textContent = currentLevel;
-    
-    // Обновить титул из профиля (из БД)
-    if (profile.title) {
-        renderTitle(profile.title);
-    } else {
-        renderTitle(null);
-    }
-    
-    // Обновить значки из профиля (из БД)
-    if (profile.badges && profile.badges.length > 0) {
-        renderBadges('profileBadges', profile.badges);
-    } else {
-        renderBadges('profileBadges', []);
-    }
-}
-
-// Обновить аватар профиля
-function updateProfileAvatar() {
-    const userAvatar = document.getElementById('userAvatar');
-    const nick = gameState.playerName || 'Игрок';
-    if (userAvatar) {
-        userAvatar.textContent = nick.charAt(0).toUpperCase();
-        const color = localStorage.getItem('userColor') || '#b45328';
-        userAvatar.style.background = color;
-    }
+        toast.classList.add('hiding');
+        setTimeout(() => toast.remove(), 250);
+    }, duration);
 }
 
 // Generate unique player ID
@@ -706,7 +93,94 @@ function toggleColorPicker() {
         popup.classList.toggle('show');
         if (popup.classList.contains('show')) {
             initColorWheel();
+            updateAvatarPreview();
         }
+    }
+}
+
+// Update avatar preview in popup
+function updateAvatarPreview() {
+    const preview = document.getElementById('avatarPreview');
+    const avatarUrl = localStorage.getItem('userAvatarUrl');
+    const color = localStorage.getItem('userColor') || '#b45328';
+    const name = gameState.playerName || 'Игрок';
+
+    if (preview) {
+        if (avatarUrl) {
+            preview.style.backgroundImage = `url(${avatarUrl})`;
+            preview.textContent = '';
+        } else {
+            preview.style.backgroundImage = '';
+            preview.style.background = color;
+            preview.textContent = name.charAt(0).toUpperCase();
+        }
+    }
+}
+
+// Apply avatar URL
+function applyAvatarUrl() {
+    const input = document.getElementById('avatarUrlInput');
+    const url = input?.value?.trim();
+
+    if (url) {
+        localStorage.setItem('userAvatarUrl', url);
+        updateAvatarPreview();
+        updateAllAvatars();
+    }
+}
+
+// Clear avatar image
+function clearAvatarImage() {
+    localStorage.removeItem('userAvatarUrl');
+    document.getElementById('avatarUrlInput').value = '';
+    updateAvatarPreview();
+    updateAllAvatars();
+}
+
+// Update all avatars on page
+function updateAllAvatars() {
+    const avatarUrl = localStorage.getItem('userAvatarUrl');
+    const color = localStorage.getItem('userColor') || '#b45328';
+    const name = gameState.playerName || 'Игрок';
+
+    const avatars = document.querySelectorAll('#userAvatar, #avatarPreview');
+    avatars.forEach(avatar => {
+        if (avatarUrl) {
+            avatar.style.backgroundImage = `url(${avatarUrl})`;
+            avatar.style.backgroundSize = 'cover';
+            avatar.style.backgroundPosition = 'center';
+            avatar.textContent = '';
+        } else {
+            avatar.style.backgroundImage = '';
+            avatar.style.background = color;
+            avatar.textContent = name.charAt(0).toUpperCase();
+        }
+    });
+}
+
+// Initialize avatar tabs
+function initAvatarTabs() {
+    const tabs = document.querySelectorAll('.avatar-tab');
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            // Update active tab
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+
+            // Show corresponding content
+            const tabName = tab.dataset.tab;
+            document.querySelectorAll('.avatar-tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`tab${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`).classList.add('active');
+        });
+    });
+
+    // Load saved avatar URL
+    const savedUrl = localStorage.getItem('userAvatarUrl');
+    if (savedUrl) {
+        const input = document.getElementById('avatarUrlInput');
+        if (input) input.value = savedUrl;
     }
 }
 
@@ -727,6 +201,12 @@ function copyUserTag() {
             }, 1500);
         }
     });
+}
+
+// Load profile from localStorage
+function loadProfile() {
+    const saved = localStorage.getItem('wikiRaceProfile');
+    return saved ? JSON.parse(saved) : { level: 1, xp: 0, title: null };
 }
 
 // Update user display in navbar
@@ -753,6 +233,96 @@ function updateOnlineCount(count) {
     const countEl = document.getElementById('onlineCount');
     if (countEl) {
         countEl.textContent = count;
+    }
+}
+
+// ========== STREAMER MODE ==========
+// Load streamer mode from localStorage
+function loadStreamerMode() {
+    const saved = localStorage.getItem('streamerMode');
+    gameState.streamerMode = saved === 'true';
+    applyStreamerMode(gameState.streamerMode);
+    updateStreamerModeUI();
+}
+
+// Save streamer mode to localStorage
+function saveStreamerMode(enabled) {
+    localStorage.setItem('streamerMode', enabled ? 'true' : 'false');
+}
+
+// Toggle streamer mode
+function toggleStreamerMode() {
+    gameState.streamerMode = !gameState.streamerMode;
+    saveStreamerMode(gameState.streamerMode);
+    applyStreamerMode(gameState.streamerMode);
+    updateStreamerModeUI();
+}
+
+// Apply streamer mode (add/remove body class)
+function applyStreamerMode(enabled) {
+    if (enabled) {
+        document.body.classList.add('streamer-mode');
+    } else {
+        document.body.classList.remove('streamer-mode');
+    }
+}
+
+// Update streamer mode UI (toggle button state)
+function updateStreamerModeUI() {
+    const toggle = document.getElementById('streamerModeToggle');
+
+    if (toggle) {
+        toggle.classList.toggle('active', gameState.streamerMode);
+    }
+}
+
+// ========== NEW YEAR THEME ==========
+// Load new year theme from localStorage
+function loadNewYearTheme() {
+    const saved = localStorage.getItem('newYearTheme');
+    // Default to enabled during holiday season
+    const isHolidaySeason = true; // Can check date if needed
+    const enabled = saved === null ? isHolidaySeason : saved === 'true';
+    applyNewYearTheme(enabled);
+    updateNewYearThemeUI(enabled);
+}
+
+// Save new year theme to localStorage
+function saveNewYearTheme(enabled) {
+    localStorage.setItem('newYearTheme', enabled ? 'true' : 'false');
+}
+
+// Toggle new year theme
+function toggleNewYearTheme() {
+    const isEnabled = document.body.classList.contains('newyear-theme');
+    const newState = !isEnabled;
+    saveNewYearTheme(newState);
+    applyNewYearTheme(newState);
+    updateNewYearThemeUI(newState);
+}
+
+// Apply new year theme (add/remove body class)
+function applyNewYearTheme(enabled) {
+    if (enabled) {
+        document.body.classList.add('newyear-theme');
+    } else {
+        document.body.classList.remove('newyear-theme');
+    }
+}
+
+// Update new year theme UI (theme selector state)
+function updateNewYearThemeUI(enabled) {
+    const themeDefault = document.getElementById('themeDefault');
+    const themeNewYear = document.getElementById('themeNewYear');
+
+    if (themeDefault && themeNewYear) {
+        if (enabled) {
+            themeDefault.classList.remove('active');
+            themeNewYear.classList.add('active');
+        } else {
+            themeDefault.classList.add('active');
+            themeNewYear.classList.remove('active');
+        }
     }
 }
 
@@ -788,26 +358,55 @@ function handleServerMessage(message) {
             console.log('Room created:', message.code);
             gameState.roomCode = message.code;
             gameState.isHost = true;
+            if (message.maxPlayers) updateMaxPlayersDisplay(message.maxPlayers);
             showRoomPanel(message.code, message.players, true);
+            updateStartButtonState(message.players);
             break;
         case 'room_joined':
             console.log('Room joined:', message.code, message.players);
             gameState.roomCode = message.code;
             gameState.isHost = false;
+            if (message.maxPlayers) updateMaxPlayersDisplay(message.maxPlayers);
             showRoomPanel(message.code, message.players, false);
+            updateStartButtonState(message.players);
             break;
         case 'player_joined':
             updatePlayersListPanel(message.players);
+            updateStartButtonState(message.players);
             break;
         case 'player_left':
             updatePlayersListPanel(message.players);
+            updateStartButtonState(message.players);
+            break;
+        case 'host_left':
+            // Host left - show fullscreen overlay with countdown
+            showHostLeftOverlay();
+            break;
+        case 'room_closed':
+            // Room was closed by server - return to menu
+            hideHostLeftOverlay();
+            gameState.roomCode = null;
+            gameState.isHost = false;
+            gameState.players = [];
+            gameState.gameActive = false;
+            if (gameState.ws) {
+                gameState.ws.close();
+                gameState.ws = null;
+            }
+            showScreen('lobby');
+            // Reset to main menu slide
+            document.querySelectorAll('.slide').forEach(s => {
+                s.classList.remove('active', 'slide-left');
+            });
+            document.querySelector('.slide-menu').classList.add('active');
             break;
         case 'lobby_ready_update':
             updatePlayersListPanel(message.players);
-            updateReadyButtonState(message.players);
+            updateStartButtonState(message.players);
             break;
         case 'players_update':
             updatePlayersListPanel(message.players);
+            updateStartButtonState(message.players);
             break;
         case 'game_started':
             gameState.targetArticle = message.targetArticle;
@@ -828,6 +427,10 @@ function handleServerMessage(message) {
             console.log('🎉 Game finished! Winner:', message.winner, 'Target:', message.targetArticle);
             gameState.gameActive = false;
             gameState.targetArticle = message.targetArticle;
+            // Update players list from server
+            if (message.players) {
+                gameState.players = message.players;
+            }
             console.log('Calling showMultiplayerResults...');
             showMultiplayerResults(message.winner, message.time, message.targetArticle, message.leaderboard);
             console.log('showMultiplayerResults called');
@@ -853,8 +456,11 @@ function handleServerMessage(message) {
         case 'room_settings':
             applyRoomSettings(message);
             break;
+        case 'max_players_updated':
+            updateMaxPlayersDisplay(message.maxPlayers);
+            break;
         case 'error':
-            alert(message.message);
+            showToast('error', 'Ошибка', message.message);
             break;
     }
 }
@@ -920,15 +526,13 @@ function slideToMenu() {
 
 // Max players selector
 let maxPlayers = 8;
-let wheelIndex = 6; // Default index for 8 players
-const wheelValues = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
 
 function showMaxPlayersPopup() {
     if (!gameState.isHost) return;
     const popup = document.getElementById('maxPlayersPopup');
     if (popup) {
         popup.classList.add('show');
-        updateWheelPosition();
+        initMaxPlayersGrid();
     }
 }
 
@@ -937,35 +541,39 @@ function hideMaxPlayersPopup() {
     if (popup) popup.classList.remove('show');
 }
 
-function updateWheelPosition() {
-    const wheelNumbers = document.getElementById('wheelNumbers');
-    if (!wheelNumbers) return;
+function initMaxPlayersGrid() {
+    const grid = document.getElementById('maxPlayersGrid');
+    if (!grid) return;
 
-    // Calculate offset to center the active item
-    const itemHeight = 46;
-    const containerHeight = 140;
-    const centerOffset = (containerHeight - itemHeight) / 2;
-    const offset = -(wheelIndex * itemHeight) + centerOffset;
+    // Update selected state
+    grid.querySelectorAll('.max-players-btn').forEach(btn => {
+        const value = parseInt(btn.dataset.value);
+        btn.classList.toggle('selected', value === maxPlayers);
 
-    wheelNumbers.style.transform = `translateY(${offset}px)`;
+        btn.onclick = () => {
+            // Update selection
+            grid.querySelectorAll('.max-players-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
 
-    // Update active states
-    document.querySelectorAll('.wheel-num').forEach((num, i) => {
-        num.classList.remove('active', 'near');
-        if (i === wheelIndex) {
-            num.classList.add('active');
-        } else if (Math.abs(i - wheelIndex) === 1) {
-            num.classList.add('near');
-        }
+            // Set value and apply
+            maxPlayers = value;
+            applyMaxPlayers();
+            hideMaxPlayersPopup();
+        };
     });
-
-    maxPlayers = wheelValues[wheelIndex];
 }
 
-function wheelUp() {
-    if (wheelIndex > 0) {
-        wheelIndex--;
-        updateWheelPosition();
+function applyMaxPlayers() {
+    // Update display
+    const display = document.getElementById('maxPlayersDisplay');
+    if (display) display.textContent = maxPlayers;
+
+    // Send to server if in room
+    if (gameState.ws && gameState.roomCode && gameState.isHost) {
+        gameState.ws.send(JSON.stringify({
+            type: 'update_settings',
+            maxPlayers: maxPlayers
+        }));
     }
 }
 
@@ -984,21 +592,11 @@ function selectMaxPlayers(value) {
     }
 }
 
-function confirmMaxPlayers() {
+// Update max players display from server
+function updateMaxPlayersDisplay(newMax) {
+    maxPlayers = newMax;
     const display = document.getElementById('maxPlayersDisplay');
-    if (display) display.textContent = maxPlayers;
-    hideMaxPlayersPopup();
-
-    // Notify server if in room
-    if (gameState.ws && gameState.roomCode && gameState.isHost) {
-        gameState.ws.send(JSON.stringify({
-            type: 'room_settings',
-            death404Mode: gameState.death404Mode,
-            modifiers: gameState.modifiers,
-            timeLimitSeconds: gameState.timeLimitSeconds,
-            maxPlayers: maxPlayers
-        }));
-    }
+    if (display) display.textContent = newMax;
 }
 
 // Show room panel on the right
@@ -1364,6 +962,7 @@ function handleGlobalKeyboard(e) {
 // Update players list in panel
 function updatePlayersListPanel(players) {
     console.log('updatePlayersListPanel:', players);
+    console.log('Players avatarUrls:', players.map(p => ({ name: p.name, avatarUrl: p.avatarUrl })));
     gameState.players = players;
     const list = document.getElementById('playersListPanel');
     const playersCount = document.getElementById('playersCount');
@@ -1379,41 +978,48 @@ function updatePlayersListPanel(players) {
             const isHost = index === 0;
             const color = p.color || '#666';
             const isReady = p.ready || false;
-            const level = p.level || 1;
-            const title = p.title || null;
-            const titleHtml = title ? `<div class="player-item-title" style="color: ${title.color || 'var(--muted-foreground)'}">${title.name}</div>` : '';
+            const avatarUrl = p.avatarUrl || '';
 
-            // Status icon
-            let statusClass = '';
-            let statusIcon = '○';
-            if (isHost) {
-                statusClass = 'host';
-                statusIcon = '★';
-            } else if (isReady) {
-                statusClass = 'ready';
-                statusIcon = '✓';
+            // Avatar style
+            let avatarStyle = `background: ${color};`;
+            let avatarContent = p.name.charAt(0).toUpperCase();
+            if (avatarUrl) {
+                avatarStyle = `background-image: url(${avatarUrl}); background-size: cover; background-position: center;`;
+                avatarContent = '';
             }
 
+            // Status icon SVG
+            let statusIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/></svg>';
+            let statusClass = '';
+
+            if (isHost) {
+                statusClass = 'host';
+                statusIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L9 9H2l6 5-2 8 6-4 6 4-2-8 6-5h-7z"/></svg>';
+            } else if (isReady) {
+                statusClass = 'ready';
+                statusIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>';
+            }
+
+            // Item classes
+            let itemClasses = 'player-item';
+            if (isHost) itemClasses += ' is-host';
+            if (isReady && !isHost) itemClasses += ' is-ready';
+
             return `
-                <div class="player-item ${isHost ? 'is-host' : ''}" data-player='${JSON.stringify(p)}'>
-                    <div class="player-item-avatar" style="background: ${color};">
-                        ${p.name.charAt(0).toUpperCase()}
-                        <span class="player-level-mini">${level}</span>
+                <div class="${itemClasses}" onclick="showPlayerPopup('${p.name}', '${color}', '${avatarUrl || ''}')">
+                    <div class="player-item-avatar" style="${avatarStyle}">
+                        ${avatarContent}
                     </div>
                     <div class="player-item-info">
                         <div class="player-item-name">${p.name}</div>
-                        ${titleHtml}
+                        ${isHost ? '<div class="player-item-role">Хост</div>' : (isReady ? '<div class="player-item-role" style="color: oklch(0.55 0.15 145)">Готов</div>' : '')}
                     </div>
                     <div class="player-item-status ${statusClass}">${statusIcon}</div>
                 </div>
             `;
         }).join('');
-        
-        // Добавить обработчики наведения
-        list.querySelectorAll('.player-item').forEach(item => {
-            item.addEventListener('mouseenter', showPlayerPopup);
-            item.addEventListener('mouseleave', hidePlayerPopup);
-        });
+
+        // Обработчики уже добавлены через onclick в HTML
     }
 
     // Update ready progress bar
@@ -1421,6 +1027,59 @@ function updatePlayersListPanel(players) {
 
     // Update start button state for host
     updateStartButtonState(players);
+}
+
+// Show player popup (called from onclick)
+function showPlayerPopup(name, color, avatarUrl) {
+    // Remove existing popup
+    const existingPopup = document.getElementById('playerPopup');
+    if (existingPopup) existingPopup.remove();
+
+    // Validate parameters
+    if (!name || typeof name !== 'string') return;
+
+    // Create popup
+    const popup = document.createElement('div');
+    popup.id = 'playerPopup';
+    popup.className = 'player-popup';
+
+    let avatarStyle = `background: ${color || '#666'};`;
+    let avatarContent = name.charAt(0).toUpperCase();
+    if (avatarUrl) {
+        avatarStyle = `background-image: url(${avatarUrl}); background-size: cover; background-position: center;`;
+        avatarContent = '';
+    }
+
+    popup.innerHTML = `
+        <div class="player-popup-content">
+            <button class="player-popup-close" onclick="closePlayerPopup()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+            <div class="player-popup-avatar" style="${avatarStyle}">${avatarContent}</div>
+            <div class="player-popup-name">${name}</div>
+        </div>
+    `;
+
+    document.body.appendChild(popup);
+
+    // Show with animation
+    requestAnimationFrame(() => popup.classList.add('show'));
+
+    // Close on click outside
+    popup.addEventListener('click', (e) => {
+        if (e.target === popup) closePlayerPopup();
+    });
+}
+
+// Close player popup
+function closePlayerPopup() {
+    const popup = document.getElementById('playerPopup');
+    if (popup) {
+        popup.classList.remove('show');
+        setTimeout(() => popup.remove(), 200);
+    }
 }
 
 // Update ready progress bar
@@ -1451,6 +1110,7 @@ function updateReadyProgress(players) {
 
 // Update start button state based on ready status
 function updateStartButtonState(players) {
+    console.log('updateStartButtonState called, isHost:', gameState.isHost, 'players:', players);
     const btnStart = document.getElementById('btnStartGamePanel');
     const btnReady = document.getElementById('btnReadyLobby');
     const roomSettings = document.getElementById('roomSettings');
@@ -1471,16 +1131,19 @@ function updateStartButtonState(players) {
     // Check if all non-host players are ready
     const nonHostPlayers = players.slice(1);
     const allReady = nonHostPlayers.length === 0 || nonHostPlayers.every(p => p.ready);
+    console.log('nonHostPlayers:', nonHostPlayers, 'allReady:', allReady);
 
     if (btnStart) {
         btnStart.disabled = !allReady;
+        console.log('btnStart.disabled set to:', !allReady);
+        const btnLabel = btnStart.querySelector('.btn-label');
         if (allReady && nonHostPlayers.length > 0) {
-            btnStart.textContent = 'Начать игру';
+            if (btnLabel) btnLabel.textContent = 'Начать игру';
         } else if (nonHostPlayers.length === 0) {
-            btnStart.textContent = 'Начать игру';
+            if (btnLabel) btnLabel.textContent = 'Начать игру';
             btnStart.disabled = false;
         } else {
-            btnStart.textContent = 'Ожидание готовности...';
+            if (btnLabel) btnLabel.textContent = 'Ожидание готовности...';
         }
     }
 }
@@ -1489,52 +1152,38 @@ function updateStartButtonState(players) {
 function sendReadyLobby() {
     if (gameState.ws && gameState.roomCode && !gameState.isHost) {
         const btnReady = document.getElementById('btnReadyLobby');
-        const isCurrentlyReady = btnReady?.classList.contains('btn-ready-active');
-        
+        const isReady = btnReady && btnReady.classList.contains('btn-ready-active');
+
         gameState.ws.send(JSON.stringify({
             type: 'lobby_ready',
             playerName: gameState.playerName,
-            ready: !isCurrentlyReady
+            ready: !isReady
         }));
 
         // Update button
         if (btnReady) {
-            if (isCurrentlyReady) {
-                btnReady.textContent = '✓ Готов';
+            if (isReady) {
+                // Cancel ready
+                btnReady.innerHTML = '<span class="btn-icon">✓</span><span class="btn-label">Готов</span>';
                 btnReady.classList.remove('btn-ready-active');
             } else {
-                btnReady.textContent = '✗ Отменить';
+                // Set ready
+                btnReady.innerHTML = '<span class="btn-icon">✕</span><span class="btn-label">Отменить</span>';
                 btnReady.classList.add('btn-ready-active');
             }
         }
     }
 }
 
-// Update ready button state based on server data
-function updateReadyButtonState(players) {
-    if (gameState.isHost) return;
-    
-    const myPlayer = players.find(p => p.name === gameState.playerName);
-    const btnReady = document.getElementById('btnReadyLobby');
-    
-    if (btnReady && myPlayer) {
-        if (myPlayer.ready) {
-            btnReady.textContent = '✗ Отменить';
-            btnReady.classList.add('btn-ready-active');
-        } else {
-            btnReady.textContent = '✓ Готов';
-            btnReady.classList.remove('btn-ready-active');
-        }
-    }
-}
-
 // Copy room code from panel
 function copyRoomCodePanel() {
+    const card = document.querySelector('.room-code-card');
     const el = document.getElementById('roomCodeDisplay');
+    const hint = document.querySelector('.room-code-hint');
     // Use stored room code, not current text (which might be "Скопировано!")
     const code = gameState.roomCode || el.dataset.code || el.textContent;
 
-    // Don't copy if it's already showing "Скопировано!"
+    // Don't copy if it's already showing "Скопировано!" or invalid
     if (code === 'Скопировано!' || !code || code === '------') return;
 
     navigator.clipboard.writeText(code).then(() => {
@@ -1542,10 +1191,33 @@ function copyRoomCodePanel() {
         if (!el.dataset.code) {
             el.dataset.code = code;
         }
-        el.textContent = 'Скопировано!';
-        setTimeout(() => {
-            el.textContent = el.dataset.code || gameState.roomCode;
-        }, 1500);
+
+        // Add copied class for animation
+        if (card) {
+            card.classList.add('copied');
+        }
+
+        // Check if streamer mode is active
+        if (document.body.classList.contains('streamer-mode')) {
+            // Show notification in hint instead of changing code text
+            if (hint) {
+                const originalHint = hint.textContent;
+                hint.textContent = '✓ Код скопирован';
+                setTimeout(() => {
+                    hint.textContent = originalHint;
+                    if (card) card.classList.remove('copied');
+                }, 2000);
+            }
+        } else {
+            // Normal mode - change hint text only
+            if (hint) {
+                hint.textContent = '✓ Скопировано';
+            }
+            setTimeout(() => {
+                if (hint) hint.textContent = 'Нажмите чтобы скопировать';
+                if (card) card.classList.remove('copied');
+            }, 2000);
+        }
     });
 }
 
@@ -1590,6 +1262,12 @@ function loadNickname() {
     }
 
     updateUserDisplay();
+
+    // Load streamer mode
+    loadStreamerMode();
+
+    // Load new year theme
+    loadNewYearTheme();
 }
 
 // Save nickname to localStorage
@@ -1602,7 +1280,6 @@ function saveNickname(name) {
     if (playerNameInput) playerNameInput.value = name;
 
     updateUserDisplay();
-    updateProfileAvatar();
 }
 
 // Get leaderboard from localStorage
@@ -1714,7 +1391,7 @@ async function getArticleDescription(articleTitle) {
 async function startSinglePlayer() {
     gameState.playerName = document.getElementById('playerName').value || 'Игрок';
     if (!gameState.playerName) {
-        alert('Введите имя!');
+        showToast('warning', 'Внимание', 'Введите имя игрока');
         return;
     }
 
@@ -1742,7 +1419,7 @@ async function startSinglePlayer() {
 function createRoom() {
     gameState.playerName = document.getElementById('playerName').value || 'Игрок';
     if (!gameState.playerName) {
-        alert('Введите имя!');
+        showToast('warning', 'Внимание', 'Введите имя игрока');
         return;
     }
 
@@ -1766,10 +1443,24 @@ function createRoom() {
     if (!gameState.ws || gameState.ws.readyState !== WebSocket.OPEN) {
         connectWebSocket();
         setTimeout(() => {
-            gameState.ws.send(JSON.stringify(roomData));
+            gameState.ws.send(JSON.stringify({
+                type: 'create_room',
+                playerName: gameState.playerName,
+                color: customization.color,
+                borderStyle: customization.borderStyle,
+                avatarUrl: customization.avatarUrl,
+                maxPlayers: maxPlayers
+            }));
         }, 500);
     } else {
-        gameState.ws.send(JSON.stringify(roomData));
+        gameState.ws.send(JSON.stringify({
+            type: 'create_room',
+            playerName: gameState.playerName,
+            color: customization.color,
+            borderStyle: customization.borderStyle,
+            avatarUrl: customization.avatarUrl,
+            maxPlayers: maxPlayers
+        }));
     }
 }
 
@@ -1785,17 +1476,17 @@ function joinRoomConfirm() {
     const code = document.getElementById('roomCodeInput').value.toUpperCase();
 
     if (!gameState.playerName) {
-        alert('Введите имя!');
+        showToast('warning', 'Внимание', 'Введите имя игрока');
         return;
     }
     if (!code || code.length !== 6) {
-        alert('Введите корректный код комнаты!');
+        showToast('warning', 'Внимание', 'Введите корректный код комнаты (6 символов)');
         return;
     }
 
     // Check if already in this room
     if (gameState.roomCode === code) {
-        alert('Вы уже в этой комнате!');
+        showToast('info', 'Информация', 'Вы уже находитесь в этой комнате');
         return;
     }
 
@@ -1804,7 +1495,7 @@ function joinRoomConfirm() {
 
     const customization = getUserCustomization();
     const profile = loadProfile();
-    
+
     const joinData = {
         type: 'join_room',
         code,
@@ -1868,10 +1559,10 @@ function startCountdown() {
 function setTargetTitle(text) {
     const titleEl = document.getElementById('targetTitle');
     const wrapper = titleEl.parentElement;
-    
+
     titleEl.textContent = text;
     titleEl.classList.remove('marquee');
-    
+
     // Check if text overflows after a small delay
     requestAnimationFrame(() => {
         if (titleEl.scrollWidth > wrapper.clientWidth) {
@@ -2187,7 +1878,7 @@ function checkTargetByDescription() {
 // Disqualify player
 function disqualify(reason) {
     gameState.gameActive = false;
-    alert(reason);
+    showToast('error', 'Дисквалификация', reason, 6000);
     showResults(gameState.clickCount, '∞', gameState.targetArticle);
 }
 
@@ -2303,7 +1994,7 @@ function showResults(clicks, time, target) {
     // Add to leaderboard (only for single player)
     if (!gameState.roomCode) {
         addToLeaderboard(gameState.playerName, time);
-        
+
         // Добавить XP за одиночную игру
         const timeSeconds = timeToSeconds(time);
         addGameResult(true, true, timeSeconds, clicks);
@@ -2348,7 +2039,7 @@ function showMultiplayerResults(winnerName, time, target, leaderboard) {
     if (leaderboard && leaderboard.length > 0) {
         updateLeaderboard(leaderboard);
     }
-    
+
     // Добавить XP за мультиплеер
     const isWinner = winnerName === gameState.playerName;
     const timeSeconds = timeToSeconds(time);
@@ -2365,7 +2056,7 @@ function showMultiplayerResults(winnerName, time, target, leaderboard) {
 function updateLeaderboard(leaderboard) {
     const list = document.getElementById('leaderboardList');
     if (!list) return;
-    
+
     list.innerHTML = leaderboard.map((player, index) => `
         <div class="leaderboard-item ${index === 0 ? 'first' : ''}">
             <div class="leaderboard-rank">${index + 1}</div>
@@ -2408,8 +2099,17 @@ async function playAgain() {
         console.log('🔄 Starting new game in room:', gameState.roomCode);
         await startGameHost();
     } else if (gameState.roomCode) {
-        // Non-host - should use ready button instead
-        return;
+        // Non-host - send ready status
+        console.log('✓ Non-host sending ready status');
+        sendReady();
+
+        // Update button to show waiting state
+        const btnPlayAgain = document.getElementById('btnPlayAgain');
+        if (btnPlayAgain) {
+            btnPlayAgain.disabled = true;
+            btnPlayAgain.innerHTML = '<span class="btn-icon">✓</span><span class="btn-label">Ожидание...</span>';
+            btnPlayAgain.style.opacity = '0.7';
+        }
     } else {
         // Single player - start new game
         showScreen('countdown');
@@ -2451,39 +2151,46 @@ function updateReadyStatus(players) {
             const isHost = index === 0;
             const color = p.color || '#666';
             const avatarUrl = p.avatarUrl || '';
+            const isReady = p.ready || false;
             const borderStyle = p.borderStyle || 'none';
 
-            let avatarStyle = `background: ${color};`;
-            let avatarClass = 'player-avatar-small';
             let avatarContent = p.name.charAt(0).toUpperCase();
-
-            // If has avatar URL, use it
+            let avatarStyle = `background: ${color};`;
             if (avatarUrl) {
                 avatarStyle = `background-image: url(${avatarUrl}); background-size: cover; background-position: center;`;
-                avatarClass += ' has-image';
                 avatarContent = '';
             }
+
+            // Status icon SVG
+            let statusIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/></svg>';
+            let statusClass = '';
+            if (isHost) {
+                statusClass = 'host';
+                statusIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L9 9H2l6 5-2 8 6-4 6 4-2-8 6-5h-7z"/></svg>';
+            } else if (isReady) {
+                statusClass = 'ready';
+                statusIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>';
+            }
+
+            // Item classes
+            let itemClasses = 'player-item';
+            if (isHost) itemClasses += ' is-host';
+            if (isReady && !isHost) itemClasses += ' is-ready';
 
             if (borderStyle === 'glow') {
                 avatarStyle += ` box-shadow: 0 0 8px ${color}, 0 0 15px ${color};`;
             } else if (borderStyle === 'pulse') {
-                avatarClass += ' avatar-style-pulse';
-            } else if (borderStyle === 'rainbow') {
-                avatarClass += ' avatar-style-rainbow';
+                avatarStyle += ' animation: pulse 2s infinite;';
             }
 
-            // Ready indicator - host is always ready, others show status
-            const readyIndicator = isHost
-                ? ''
-                : `<div class="ready-status ${p.ready ? 'ready' : 'waiting'}">${p.ready ? '✓' : '⏳'}</div>`;
-
             return `
-                <div class="ready-player-item ${p.ready ? 'player-ready' : ''}">
-                    <div class="ready-player-info">
-                        <div class="${avatarClass}" style="${avatarStyle}">${avatarContent}</div>
-                        <span>${isHost ? '👑 ' : ''}${p.name}</span>
+                <div class="${itemClasses}">
+                    <div class="player-item-avatar" style="${avatarStyle}">${avatarContent}</div>
+                    <div class="player-item-info">
+                        <div class="player-item-name">${p.name}</div>
+                        ${isHost ? '<div class="player-item-role">Хост</div>' : (isReady ? '<div class="player-item-role" style="color: oklch(0.55 0.15 145)">Готов</div>' : '')}
                     </div>
-                    ${readyIndicator}
+                    <div class="player-item-status ${statusClass}">${statusIcon}</div>
                 </div>
             `;
         }).join('');
@@ -2493,8 +2200,11 @@ function updateReadyStatus(players) {
 // Enable start button when all ready
 function enableStartButton() {
     const btn = document.getElementById('btnPlayAgain');
-    btn.disabled = false;
-    btn.innerHTML = '<span class="btn-icon">🚀</span><span class="btn-label">Начать игру!</span>';
+    if (btn) {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        btn.innerHTML = '<span class="btn-label">Начать игру!</span>';
+    }
 }
 
 // Setup results screen for multiplayer
@@ -2502,59 +2212,177 @@ function setupMultiplayerResults() {
     const btnPlayAgain = document.getElementById('btnPlayAgain');
     const btnReady = document.getElementById('btnReady');
 
+    console.log('setupMultiplayerResults called');
+    console.log('  roomCode:', gameState.roomCode);
+    console.log('  isHost:', gameState.isHost);
+    console.log('  players:', gameState.players);
+
     if (gameState.roomCode) {
+        // Hide the separate ready button - we use Play Again for both
+        if (btnReady) btnReady.classList.add('hidden');
+
         if (gameState.isHost) {
             // Host sees "Play again" but disabled until all ready
-            btnPlayAgain.classList.remove('hidden');
-            btnPlayAgain.disabled = true;
-            btnPlayAgain.innerHTML = '<span class="btn-icon">⏳</span><span class="btn-label">Ожидание игроков...</span>';
-            btnReady.classList.add('hidden');
+            console.log('  -> Host mode: showing Play Again button');
+            if (btnPlayAgain) {
+                btnPlayAgain.classList.remove('hidden');
+                btnPlayAgain.disabled = true;
+                btnPlayAgain.style.opacity = '0.5';
+                btnPlayAgain.innerHTML = '<span class="btn-label">Ожидание игроков...</span>';
+            }
 
             // Host is ready by default - send ready status
             sendReady();
         } else {
-            // Non-host sees "Ready" button
-            btnPlayAgain.classList.add('hidden');
-            btnReady.classList.remove('hidden');
-            btnReady.disabled = false;
-            btnReady.innerHTML = '<span class="btn-icon">✓</span><span class="btn-label">Готов</span>';
+            // Non-host sees Ready button (using Play Again button)
+            console.log('  -> Non-host mode: showing Ready button');
+            if (btnPlayAgain) {
+                btnPlayAgain.classList.remove('hidden');
+                btnPlayAgain.disabled = false;
+                btnPlayAgain.style.opacity = '1';
+                btnPlayAgain.innerHTML = '<span class="btn-icon">✓</span><span class="btn-label">Готов</span>';
+            }
         }
 
-        // Initialize ready list - host is ready by default
-        if (gameState.players) {
-            updateReadyStatus(gameState.players.map(p => ({
+        // Initialize ready list with current players
+        const players = gameState.players || [];
+        if (players.length > 0) {
+            updateReadyStatus(players.map(p => ({
                 ...p,
                 ready: p.name === gameState.playerName && gameState.isHost
             })));
+        } else {
+            // If no players in state, create minimal list with current player
+            updateReadyStatus([{
+                name: gameState.playerName,
+                color: localStorage.getItem('userColor') || '#b45328',
+                avatarUrl: localStorage.getItem('userAvatarUrl') || '',
+                ready: gameState.isHost
+            }]);
         }
     } else {
         // Single player
-        btnPlayAgain.classList.remove('hidden');
-        btnPlayAgain.disabled = false;
-        btnPlayAgain.innerHTML = '<span class="btn-icon">🔄</span><span class="btn-label">Играть снова</span>';
-        btnReady.classList.add('hidden');
+        console.log('  -> Single player mode');
+        if (btnPlayAgain) {
+            btnPlayAgain.classList.remove('hidden');
+            btnPlayAgain.disabled = false;
+            btnPlayAgain.innerHTML = '<span class="btn-label">Играть снова</span>';
+        }
+        if (btnReady) btnReady.classList.add('hidden');
     }
 }
 
-// Back to lobby
+// Back to lobby with loading animation
 function backToLobby() {
-    gameState.clickCount = 0;
-    gameState.currentArticle = 'Главная страница Wikipedia';
-    gameState.gameActive = false;
+    // Show loading overlay
+    showLoadingOverlay('Возвращаемся...');
 
-    // If in multiplayer - notify server and keep connection
-    if (gameState.roomCode && gameState.ws) {
-        gameState.ws.send(JSON.stringify({
-            type: 'player_to_lobby',
-            playerName: gameState.playerName
-        }));
+    setTimeout(() => {
+        gameState.clickCount = 0;
+        gameState.currentArticle = 'Главная страница Wikipedia';
+        gameState.gameActive = false;
 
-        // Show room panel again
-        showScreen('lobby');
-        showRoomPanel(gameState.roomCode, gameState.players, gameState.isHost);
+        // If in multiplayer - notify server and keep connection
+        if (gameState.roomCode && gameState.ws) {
+            gameState.ws.send(JSON.stringify({
+                type: 'player_to_lobby',
+                playerName: gameState.playerName
+            }));
+
+            // Show room panel again
+            showScreen('lobby');
+            showRoomPanel(gameState.roomCode, gameState.players, gameState.isHost);
+        } else {
+            // Single player - just go to lobby
+            showScreen('lobby');
+            slideToMenu();
+        }
+
+        hideLoadingOverlay();
+    }, 600);
+}
+
+// Loading overlay functions
+function showLoadingOverlay(text = 'Загрузка...') {
+    let overlay = document.getElementById('loadingOverlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'loadingOverlay';
+        overlay.className = 'loading-overlay';
+        overlay.innerHTML = `
+            <div class="loading-content">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">${text}</div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
     } else {
-        // Single player - just go to lobby
-        showScreen('lobby');
+        overlay.querySelector('.loading-text').textContent = text;
+    }
+
+    requestAnimationFrame(() => overlay.classList.add('show'));
+}
+
+function hideLoadingOverlay() {
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) {
+        overlay.classList.remove('show');
+        setTimeout(() => overlay.remove(), 300);
+    }
+}
+
+// Show fullscreen overlay when host leaves
+function showHostLeftOverlay() {
+    // Remove existing overlay if any
+    const existing = document.getElementById('hostLeftOverlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'hostLeftOverlay';
+    overlay.className = 'host-left-overlay';
+    overlay.innerHTML = `
+        <div class="host-left-content">
+            <div class="host-left-icon">👑</div>
+            <div class="host-left-title">Хост покинул комнату</div>
+            <div class="host-left-subtitle">Возврат в главное меню через</div>
+            <div class="host-left-countdown">5</div>
+            <div class="host-left-progress">
+                <div class="host-left-progress-bar"></div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+
+    // Animate in
+    requestAnimationFrame(() => overlay.classList.add('show'));
+
+    // Start countdown
+    let seconds = 5;
+    const countdownEl = overlay.querySelector('.host-left-countdown');
+    const progressBar = overlay.querySelector('.host-left-progress-bar');
+
+    // Start progress bar animation
+    progressBar.style.transition = 'width 5s linear';
+    requestAnimationFrame(() => {
+        progressBar.style.width = '0%';
+    });
+
+    const interval = setInterval(() => {
+        seconds--;
+        if (countdownEl) countdownEl.textContent = seconds;
+
+        if (seconds <= 0) {
+            clearInterval(interval);
+        }
+    }, 1000);
+}
+
+// Hide host left overlay
+function hideHostLeftOverlay() {
+    const overlay = document.getElementById('hostLeftOverlay');
+    if (overlay) {
+        overlay.classList.remove('show');
+        setTimeout(() => overlay.remove(), 300);
     }
 }
 
@@ -2698,6 +2526,7 @@ function initColorWheel() {
 
 function selectPresetColor(color) {
     setUserColor(color);
+    updateAvatarPreview();
 }
 
 function setUserColor(color) {
@@ -3122,10 +2951,7 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 DOM loaded, initializing...');
 
     try {
-        // Проверить авторизацию
-        checkAuth();
-        
-        // Load saved nickname (для гостей)
+        // Load saved nickname
         loadNickname();
 
         // Load user color
@@ -3133,13 +2959,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Update avatar on load
         updateAvatar();
+        updateAllAvatars();
 
-        // Display leaderboard
-        displayLeaderboard();
-        
-        // Load and display profile
-        updateProfileDisplay();
-        updateProfileAvatar();
+        // Initialize avatar tabs
+        initAvatarTabs();
     } catch (e) {
         console.error('Init error:', e);
     }
@@ -3197,6 +3020,55 @@ document.addEventListener('DOMContentLoaded', () => {
     const roomCodeDisplay = document.getElementById('roomCodeDisplay');
     if (roomCodeDisplay) roomCodeDisplay.addEventListener('click', copyRoomCodePanel);
 
+    // Settings panel toggle
+    const settingsToggle = document.getElementById('settingsToggle');
+    const settingsPanel = document.getElementById('settingsPanel');
+    if (settingsToggle && settingsPanel) {
+        settingsToggle.addEventListener('click', () => {
+            settingsPanel.classList.toggle('open');
+            settingsToggle.classList.toggle('active');
+        });
+
+        // Close when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!settingsPanel.contains(e.target)) {
+                settingsPanel.classList.remove('open');
+                settingsToggle.classList.remove('active');
+            }
+        });
+    }
+
+    // Streamer mode toggle
+    const streamerModeToggle = document.getElementById('streamerModeToggle');
+    if (streamerModeToggle) {
+        streamerModeToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleStreamerMode();
+        });
+    }
+
+    // Theme selector
+    const themeDefault = document.getElementById('themeDefault');
+    const themeNewYear = document.getElementById('themeNewYear');
+
+    if (themeDefault) {
+        themeDefault.addEventListener('click', (e) => {
+            e.stopPropagation();
+            saveNewYearTheme(false);
+            applyNewYearTheme(false);
+            updateNewYearThemeUI(false);
+        });
+    }
+
+    if (themeNewYear) {
+        themeNewYear.addEventListener('click', (e) => {
+            e.stopPropagation();
+            saveNewYearTheme(true);
+            applyNewYearTheme(true);
+            updateNewYearThemeUI(true);
+        });
+    }
+
     // Death 404 mode toggle (button style) - main menu
     const death404Toggle = document.getElementById('death404Toggle');
     if (death404Toggle) {
@@ -3233,37 +3105,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const playersCountBtn = document.getElementById('playersCountBtn');
     if (playersCountBtn) {
         playersCountBtn.addEventListener('click', showMaxPlayersPopup);
-    }
-
-    // Wheel arrows
-    const wheelUpBtn = document.getElementById('wheelUp');
-    const wheelDownBtn = document.getElementById('wheelDown');
-    if (wheelUpBtn) wheelUpBtn.addEventListener('click', wheelUp);
-    if (wheelDownBtn) wheelDownBtn.addEventListener('click', wheelDown);
-
-    // Wheel numbers click
-    document.querySelectorAll('.wheel-num').forEach(num => {
-        num.addEventListener('click', () => {
-            selectMaxPlayers(parseInt(num.dataset.value));
-        });
-    });
-
-    // Wheel scroll support
-    const numberWheel = document.getElementById('numberWheel');
-    if (numberWheel) {
-        numberWheel.addEventListener('wheel', (e) => {
-            e.preventDefault();
-            if (e.deltaY > 0) {
-                wheelDown();
-            } else {
-                wheelUp();
-            }
-        });
-    }
-
-    const maxPlayersConfirm = document.getElementById('maxPlayersConfirm');
-    if (maxPlayersConfirm) {
-        maxPlayersConfirm.addEventListener('click', confirmMaxPlayers);
     }
 
     // Close max players popup on outside click
@@ -3460,16 +3301,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Help topics navigation
-    document.querySelectorAll('.help-tab').forEach(tab => {
+    document.querySelectorAll('.help-topic-item').forEach(tab => {
         tab.addEventListener('click', () => {
-            // Update active state
-            document.querySelectorAll('.help-tab').forEach(t => t.classList.remove('active'));
+            const topicName = tab.dataset.topic;
+
+            // Update active state for tabs
+            document.querySelectorAll('.help-topic-item').forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
 
-            // Show corresponding content
-            const topicName = tab.dataset.topic;
+            // Show corresponding content page
             document.querySelectorAll('.help-page').forEach(page => {
-                page.classList.toggle('hidden', page.dataset.topic !== topicName);
+                page.classList.toggle('active', page.dataset.topic === topicName);
             });
         });
     });
